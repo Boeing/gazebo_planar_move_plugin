@@ -1,4 +1,7 @@
+// Copyright 2018 Boeing
 #include <planar_move/planar_move.h>
+
+#include <string>
 
 #include <boost/bind.hpp>
 #include <geometry_msgs/Twist.h>

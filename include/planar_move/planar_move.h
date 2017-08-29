@@ -1,8 +1,10 @@
-#ifndef PLANAR_MOVE_H
-#define PLANAR_MOVE_H
+// Copyright 2018 Boeing
+#ifndef PLANAR_MOVE_PLANAR_MOVE_H
+#define PLANAR_MOVE_PLANAR_MOVE_H
 
 #include <mutex>
 #include <thread>
+#include <string>
 
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
@@ -20,7 +22,6 @@ namespace gazebo
 
 class PlanarMove : public ModelPlugin
 {
-
   public:
     PlanarMove();
     ~PlanarMove();
@@ -69,4 +70,4 @@ class PlanarMove : public ModelPlugin
 
 }  // namespace gazebo
 
-#endif  // PLANAR_MOVE_H
+#endif  // PLANAR_MOVE_PLANAR_MOVE_H
