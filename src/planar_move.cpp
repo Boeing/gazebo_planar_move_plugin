@@ -1,5 +1,10 @@
 #include <planar_move/planar_move.h>
 
+#include <boost/bind.hpp>
+#include <geometry_msgs/Twist.h>
+
+#include <ros/advertise_options.h>
+
 namespace gazebo
 {
 
@@ -13,6 +18,8 @@ PlanarMove::~PlanarMove()
 
 void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
 {
+    ROS_INFO("Initialising PlanarMove Plugin");
+
     parent_ = parent;
 
     robot_namespace_ = "";
@@ -99,12 +106,6 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     }
     rosnode_.reset(new ros::NodeHandle(robot_namespace_));
 
-    ROS_DEBUG_NAMED("planar_move", "OCPlugin (%s) has started",
-                    robot_namespace_.c_str());
-
-    tf_prefix_ = tf::getPrefixParam(*rosnode_);
-    transform_broadcaster_.reset(new tf::TransformBroadcaster());
-
     // subscribe to the odometry topic
     ros::SubscribeOptions so =
         ros::SubscribeOptions::create<geometry_msgs::Twist>(command_topic_, 1,
@@ -114,14 +115,10 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     vel_sub_ = rosnode_->subscribe(so);
     odometry_pub_ = rosnode_->advertise<nav_msgs::Odometry>(odometry_topic_, 1);
 
-    // start custom queue for diff drive
-    callback_queue_thread_ =
-        boost::thread(boost::bind(&PlanarMove::QueueThread, this));
+    callback_queue_thread_ = std::thread(&PlanarMove::queueThread, this);
 
     // listen to the update event (broadcast every simulation iteration)
-    update_connection_ =
-        event::Events::ConnectWorldUpdateBegin(
-            boost::bind(&PlanarMove::UpdateChild, this));
+    update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&PlanarMove::UpdateChild, this));
 }
 
 void PlanarMove::UpdateChild()
@@ -162,7 +159,7 @@ void PlanarMove::cmdVelCallback(const geometry_msgs::Twist::ConstPtr &cmd_msg)
     rot_ = cmd_msg->angular.z;
 }
 
-void PlanarMove::QueueThread()
+void PlanarMove::queueThread()
 {
     static const double timeout = 0.01;
     while (alive_ && rosnode_->ok())
@@ -174,8 +171,6 @@ void PlanarMove::QueueThread()
 void PlanarMove::publishOdometry(double step_time)
 {
     ros::Time current_time = ros::Time::now();
-    std::string odom_frame = tf::resolve(tf_prefix_, odometry_frame_);
-    std::string base_footprint_frame = tf::resolve(tf_prefix_, robot_base_frame_);
 
     // getting data for base_footprint to odom transform
     math::Pose pose = parent_->GetWorldPose();
@@ -184,7 +179,7 @@ void PlanarMove::publishOdometry(double step_time)
     tf::Vector3 vt(pose.pos.x, pose.pos.y, pose.pos.z);
 
     tf::Transform base_footprint_to_odom(qt, vt);
-    transform_broadcaster_->sendTransform(tf::StampedTransform(base_footprint_to_odom, current_time, odom_frame, base_footprint_frame));
+    transform_broadcaster_.sendTransform(tf::StampedTransform(base_footprint_to_odom, current_time, odometry_frame_, robot_base_frame_));
 
     // publish odom topic
     odom_.pose.pose.position.x = pose.pos.x;
@@ -229,8 +224,8 @@ void PlanarMove::publishOdometry(double step_time)
     odom_.twist.twist.linear.y = cosf(yaw) * linear.y - sinf(yaw) * linear.x;
 
     odom_.header.stamp = current_time;
-    odom_.header.frame_id = odom_frame;
-    odom_.child_frame_id = base_footprint_frame;
+    odom_.header.frame_id = odometry_frame_;
+    odom_.child_frame_id = robot_base_frame_;
 
     odometry_pub_.publish(odom_);
 }

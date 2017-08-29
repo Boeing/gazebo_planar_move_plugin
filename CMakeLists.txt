@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(planar_move)
 
+add_definitions(-std=c++11)
+
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     std_msgs
-    std_srvs
     geometry_msgs
     nav_msgs
     tf
@@ -12,15 +13,11 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(gazebo REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
-include_directories(${GAZEBO_INCLUDE_DIRS})
 link_directories(${GAZEBO_LIBRARY_DIRS})
-
-find_package(Boost REQUIRED COMPONENTS thread)
-include_directories(${Boost_INCLUDE_DIRS})
 
 catkin_package(
     DEPENDS gazebo
-    CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs tf message_runtime
+    CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs tf
     INCLUDE_DIRS include
     LIBRARIES ${PROJECT_NAME}
 )

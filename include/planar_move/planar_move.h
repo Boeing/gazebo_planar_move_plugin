@@ -1,24 +1,19 @@
 #ifndef PLANAR_MOVE_H
 #define PLANAR_MOVE_H
 
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
-
-#include <map>
 #include <mutex>
+#include <thread>
 
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
 #include <sdf/sdf.hh>
 
-#include <geometry_msgs/Twist.h>
-#include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/Odometry.h>
-#include <ros/advertise_options.h>
-#include <ros/callback_queue.h>
+
 #include <ros/ros.h>
+#include <ros/callback_queue.h>
+
 #include <tf/transform_broadcaster.h>
-#include <tf/transform_listener.h>
 
 namespace gazebo
 {
@@ -42,12 +37,13 @@ class PlanarMove : public ModelPlugin
     physics::ModelPtr parent_;
     event::ConnectionPtr update_connection_;
 
-    boost::shared_ptr<ros::NodeHandle> rosnode_;
+    std::unique_ptr<ros::NodeHandle> rosnode_;
     ros::Publisher odometry_pub_;
     ros::Subscriber vel_sub_;
-    boost::shared_ptr<tf::TransformBroadcaster> transform_broadcaster_;
+
+    tf::TransformBroadcaster transform_broadcaster_;
+
     nav_msgs::Odometry odom_;
-    std::string tf_prefix_;
 
     std::mutex lock_;
 
@@ -60,8 +56,8 @@ class PlanarMove : public ModelPlugin
 
     // Custom Callback Queue
     ros::CallbackQueue queue_;
-    boost::thread callback_queue_thread_;
-    void QueueThread();
+    std::thread callback_queue_thread_;
+    void queueThread();
 
     double x_;
     double y_;
