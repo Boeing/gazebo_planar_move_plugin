@@ -52,12 +52,13 @@ class PlanarMove : public ModelPlugin
     std::string odometry_topic_;
     std::string odometry_frame_;
     std::string robot_base_frame_;
+    std::string control_mode_;
 
     // Custom Callback Queue
     ros::CallbackQueue queue_;
     std::thread callback_queue_thread_;
     void queueThread();
-
+    std::atomic<bool> new_cmd_;
     double x_;
     double y_;
     double rot_;
