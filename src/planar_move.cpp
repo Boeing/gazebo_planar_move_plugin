@@ -2,7 +2,7 @@
 #include <planar_move/planar_move.h>
 
 #include <string>
-
+#include <math.h>
 #include <boost/bind.hpp>
 #include <geometry_msgs/Twist.h>
 
@@ -80,7 +80,6 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
         robot_base_frame_ = sdf->GetElement("robotBaseFrame")->Get<std::string>();
     }
 
-    new_cmd_ = false;
     x_ = 0;
     y_ = 0;
     rot_ = 0;
@@ -109,6 +108,7 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     callback_queue_thread_ = std::thread(&PlanarMove::queueThread, this);
 
     // listen to the update event (broadcast every simulation iteration)
+    gz_time_last = 0.0;
     update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&PlanarMove::UpdateChild, this));
 }
 
@@ -116,13 +116,37 @@ void PlanarMove::UpdateChild()
 {
     std::lock_guard<std::mutex> lock(lock_);
 
-    if (new_cmd_)
+    // Get the simulation time and period
+
+    double gz_time_now = parent_->GetWorld()->GetSimTime().Double();
+    double dt =  gz_time_now - gz_time_last;
+    gz_time_last =  gz_time_now;
+
+    math::Pose current_pose = parent_->GetWorldPose();
+    math::Pose new_pose;
+    double current_yaw = current_pose.rot.GetYaw();
+
+    // ROS_INFO_STREAM("Command: x:" << x_ << " y:" << y_ << " rotZ:" << rot_);
+    // ROS_INFO_STREAM("Current Pose: x:" <<  current_pose.pos.x << " y:" <<  current_pose.pos.y << " Yaw:" <<  current_pose.rot.GetYaw());
+
+    //Forward velocity component (x)
+    new_pose.pos.x = current_pose.pos.x+ dt*x_*cos(current_yaw);  // We need to do this so dx and dy are in world frame
+    new_pose.pos.y = current_pose.pos.y+ dt*x_*sin(current_yaw);  // since cmd_vel is in robot frame
+
+    //Strafing velocity component (y)
+    new_pose.pos.x = new_pose.pos.x - dt*y_*cos(M_PI / 2 - current_yaw);  // We need to do this so dx and dy are in world frame
+    new_pose.pos.y = new_pose.pos.y + dt*y_*sin(M_PI / 2 - current_yaw);  // since cmd_vel is in robot frame
+    new_pose.rot.SetFromEuler(0.0, 0.0, current_yaw + dt * rot_);
+
+    physics::LinkPtr base_link = parent_->GetLink(robot_base_frame_);
+    if (base_link == NULL)
     {
-        math::Pose pose = parent_->GetWorldPose();
-        float yaw = pose.rot.GetYaw();
-        parent_->SetLinearVel(math::Vector3(x_ * cosf(yaw) - y_ * sinf(yaw), y_ * cosf(yaw) + x_ * sinf(yaw), 0));
-        parent_->SetAngularVel(math::Vector3(0, 0, rot_));
-        new_cmd_ = false;
+        ROS_FATAL_STREAM_NAMED("planar_move", "Model has no link named 'base link'");
+    }
+    else
+    {
+        // ROS_INFO_STREAM("Setting link, dt is:" << dt << " new x:" << new_pose.pos.x << " new y:" << new_pose.pos.y << " new yaw:" << new_pose.rot.GetYaw());
+        parent_->SetLinkWorldPose(new_pose, base_link);
     }
 
     publishOdometry();
@@ -139,8 +163,8 @@ void PlanarMove::FiniChild()
 
 void PlanarMove::cmdVelCallback(const geometry_msgs::Twist::ConstPtr &cmd_msg)
 {
+    // Note there is no mechanism to zero cmd_vel's. move_base or cmd_vel mux should send 0
     std::lock_guard<std::mutex> lock(lock_);
-    new_cmd_ = true;
     x_ = cmd_msg->linear.x;
     y_ = cmd_msg->linear.y;
     rot_ = cmd_msg->angular.z;
@@ -167,38 +191,38 @@ void PlanarMove::publishOdometry()
 
     tf::Transform base_footprint_to_odom(qt, vt);
     transform_broadcaster_.sendTransform(tf::StampedTransform(base_footprint_to_odom, current_time, odometry_frame_, robot_base_frame_));
-
-    // publish odom topic
-    nav_msgs::Odometry odom;
-    odom.pose.pose.position.x = pose.pos.x;
-    odom.pose.pose.position.y = pose.pos.y;
-
-    odom.pose.pose.orientation.x = pose.rot.x;
-    odom.pose.pose.orientation.y = pose.rot.y;
-    odom.pose.pose.orientation.z = pose.rot.z;
-    odom.pose.pose.orientation.w = pose.rot.w;
-    odom.pose.covariance[0] = 0.00001;
-    odom.pose.covariance[7] = 0.00001;
-    odom.pose.covariance[14] = 1000000000000.0;
-    odom.pose.covariance[21] = 1000000000000.0;
-    odom.pose.covariance[28] = 1000000000000.0;
-    odom.pose.covariance[35] = 0.001;
-
-    math::Vector3 linear_velocity = parent_->GetRelativeLinearVel();
-    odom.twist.twist.linear.x = linear_velocity.x;
-    odom.twist.twist.linear.y = linear_velocity.y;
-    odom.twist.twist.linear.z = linear_velocity.z;
-
-    math::Vector3 rot_velocity = parent_->GetRelativeAngularVel();
-    odom.twist.twist.angular.x = rot_velocity.x;
-    odom.twist.twist.angular.y = rot_velocity.y;
-    odom.twist.twist.angular.z = rot_velocity.z;
-
-    odom.header.stamp = current_time;
-    odom.header.frame_id = odometry_frame_;
-    odom.child_frame_id = robot_base_frame_;
-
-    odometry_pub_.publish(odom);
+//
+//    // publish odom topic
+//    nav_msgs::Odometry odom;
+//    odom.pose.pose.position.x = pose.pos.x;
+//    odom.pose.pose.position.y = pose.pos.y;
+//
+//    odom.pose.pose.orientation.x = pose.rot.x;
+//    odom.pose.pose.orientation.y = pose.rot.y;
+//    odom.pose.pose.orientation.z = pose.rot.z;
+//    odom.pose.pose.orientation.w = pose.rot.w;
+//    odom.pose.covariance[0] = 0.00001;
+//    odom.pose.covariance[7] = 0.00001;
+//    odom.pose.covariance[14] = 1000000000000.0;
+//    odom.pose.covariance[21] = 1000000000000.0;
+//    odom.pose.covariance[28] = 1000000000000.0;
+//    odom.pose.covariance[35] = 0.001;
+//
+//    math::Vector3 linear_velocity = parent_->GetRelativeLinearVel();
+//    odom.twist.twist.linear.x = linear_velocity.x;
+//    odom.twist.twist.linear.y = linear_velocity.y;
+//    odom.twist.twist.linear.z = linear_velocity.z;
+//
+//    math::Vector3 rot_velocity = parent_->GetRelativeAngularVel();
+//    odom.twist.twist.angular.x = rot_velocity.x;
+//    odom.twist.twist.angular.y = rot_velocity.y;
+//    odom.twist.twist.angular.z = rot_velocity.z;
+//
+//    odom.header.stamp = current_time;
+//    odom.header.frame_id = odometry_frame_;
+//    odom.child_frame_id = robot_base_frame_;
+//
+//    odometry_pub_.publish(odom);
 }
 
 GZ_REGISTER_MODEL_PLUGIN(PlanarMove)

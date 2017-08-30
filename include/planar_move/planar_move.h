@@ -58,12 +58,14 @@ class PlanarMove : public ModelPlugin
     std::thread callback_queue_thread_;
     void queueThread();
 
-    std::atomic<bool> new_cmd_;
     double x_;
     double y_;
     double rot_;
 
     bool alive_;
+
+    double gz_time_last;
+
 };
 
 }  // namespace gazebo
