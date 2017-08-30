@@ -5,6 +5,7 @@
 #include <mutex>
 #include <thread>
 #include <string>
+#include <atomic>
 
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
@@ -32,7 +33,7 @@ class PlanarMove : public ModelPlugin
     virtual void FiniChild();
 
   private:
-    void publishOdometry(double step_time);
+    void publishOdometry();
     void cmdVelCallback(const geometry_msgs::Twist::ConstPtr &cmd_msg);
 
     physics::ModelPtr parent_;
@@ -44,8 +45,6 @@ class PlanarMove : public ModelPlugin
 
     tf::TransformBroadcaster transform_broadcaster_;
 
-    nav_msgs::Odometry odom_;
-
     std::mutex lock_;
 
     std::string robot_namespace_;
@@ -53,19 +52,18 @@ class PlanarMove : public ModelPlugin
     std::string odometry_topic_;
     std::string odometry_frame_;
     std::string robot_base_frame_;
-    double odometry_rate_;
 
     // Custom Callback Queue
     ros::CallbackQueue queue_;
     std::thread callback_queue_thread_;
     void queueThread();
 
+    std::atomic<bool> new_cmd_;
     double x_;
     double y_;
     double rot_;
+
     bool alive_;
-    common::Time last_odom_publish_time_;
-    math::Pose last_odom_pose_;
 };
 
 }  // namespace gazebo

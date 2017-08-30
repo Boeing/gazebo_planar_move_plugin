@@ -80,19 +80,7 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
         robot_base_frame_ = sdf->GetElement("robotBaseFrame")->Get<std::string>();
     }
 
-    odometry_rate_ = 20.0;
-    if (!sdf->HasElement("odometryRate"))
-    {
-        ROS_WARN_NAMED("planar_move", "PlanarMovePlugin (ns = %s) missing <odometryRate>, defaults to %f",
-                       robot_namespace_.c_str(), odometry_rate_);
-    }
-    else
-    {
-        odometry_rate_ = sdf->GetElement("odometryRate")->Get<double>();
-    }
-
-    last_odom_publish_time_ = parent_->GetWorld()->GetSimTime();
-    last_odom_pose_ = parent_->GetWorldPose();
+    new_cmd_ = false;
     x_ = 0;
     y_ = 0;
     rot_ = 0;
@@ -128,21 +116,16 @@ void PlanarMove::UpdateChild()
 {
     std::lock_guard<std::mutex> lock(lock_);
 
-    math::Pose pose = parent_->GetWorldPose();
-    float yaw = pose.rot.GetYaw();
-    parent_->SetLinearVel(math::Vector3(x_ * cosf(yaw) - y_ * sinf(yaw), y_ * cosf(yaw) + x_ * sinf(yaw), 0));
-    parent_->SetAngularVel(math::Vector3(0, 0, rot_));
-
-    if (odometry_rate_ > 0.0)
+    if (new_cmd_)
     {
-        common::Time current_time = parent_->GetWorld()->GetSimTime();
-        double seconds_since_last_update = (current_time - last_odom_publish_time_).Double();
-        if (seconds_since_last_update > (1.0 / odometry_rate_))
-        {
-            publishOdometry(seconds_since_last_update);
-            last_odom_publish_time_ = current_time;
-        }
+        math::Pose pose = parent_->GetWorldPose();
+        float yaw = pose.rot.GetYaw();
+        parent_->SetLinearVel(math::Vector3(x_ * cosf(yaw) - y_ * sinf(yaw), y_ * cosf(yaw) + x_ * sinf(yaw), 0));
+        parent_->SetAngularVel(math::Vector3(0, 0, rot_));
+        new_cmd_ = false;
     }
+
+    publishOdometry();
 }
 
 void PlanarMove::FiniChild()
@@ -157,6 +140,7 @@ void PlanarMove::FiniChild()
 void PlanarMove::cmdVelCallback(const geometry_msgs::Twist::ConstPtr &cmd_msg)
 {
     std::lock_guard<std::mutex> lock(lock_);
+    new_cmd_ = true;
     x_ = cmd_msg->linear.x;
     y_ = cmd_msg->linear.y;
     rot_ = cmd_msg->angular.z;
@@ -164,14 +148,14 @@ void PlanarMove::cmdVelCallback(const geometry_msgs::Twist::ConstPtr &cmd_msg)
 
 void PlanarMove::queueThread()
 {
-    static const double timeout = 0.01;
+    const double timeout = 0.01;
     while (alive_ && rosnode_->ok())
     {
         queue_.callAvailable(ros::WallDuration(timeout));
     }
 }
 
-void PlanarMove::publishOdometry(double step_time)
+void PlanarMove::publishOdometry()
 {
     ros::Time current_time = ros::Time::now();
 
@@ -185,52 +169,36 @@ void PlanarMove::publishOdometry(double step_time)
     transform_broadcaster_.sendTransform(tf::StampedTransform(base_footprint_to_odom, current_time, odometry_frame_, robot_base_frame_));
 
     // publish odom topic
-    odom_.pose.pose.position.x = pose.pos.x;
-    odom_.pose.pose.position.y = pose.pos.y;
+    nav_msgs::Odometry odom;
+    odom.pose.pose.position.x = pose.pos.x;
+    odom.pose.pose.position.y = pose.pos.y;
 
-    odom_.pose.pose.orientation.x = pose.rot.x;
-    odom_.pose.pose.orientation.y = pose.rot.y;
-    odom_.pose.pose.orientation.z = pose.rot.z;
-    odom_.pose.pose.orientation.w = pose.rot.w;
-    odom_.pose.covariance[0] = 0.00001;
-    odom_.pose.covariance[7] = 0.00001;
-    odom_.pose.covariance[14] = 1000000000000.0;
-    odom_.pose.covariance[21] = 1000000000000.0;
-    odom_.pose.covariance[28] = 1000000000000.0;
-    odom_.pose.covariance[35] = 0.001;
+    odom.pose.pose.orientation.x = pose.rot.x;
+    odom.pose.pose.orientation.y = pose.rot.y;
+    odom.pose.pose.orientation.z = pose.rot.z;
+    odom.pose.pose.orientation.w = pose.rot.w;
+    odom.pose.covariance[0] = 0.00001;
+    odom.pose.covariance[7] = 0.00001;
+    odom.pose.covariance[14] = 1000000000000.0;
+    odom.pose.covariance[21] = 1000000000000.0;
+    odom.pose.covariance[28] = 1000000000000.0;
+    odom.pose.covariance[35] = 0.001;
 
-    // get velocity in /odom frame
-    math::Vector3 linear;
-    linear.x = (pose.pos.x - last_odom_pose_.pos.x) / step_time;
-    linear.y = (pose.pos.y - last_odom_pose_.pos.y) / step_time;
-    if (rot_ > M_PI / step_time)
-    {
-        // we cannot calculate the angular velocity correctly
-        odom_.twist.twist.angular.z = rot_;
-    }
-    else
-    {
-        float last_yaw = last_odom_pose_.rot.GetYaw();
-        float current_yaw = pose.rot.GetYaw();
-        while (current_yaw < last_yaw - M_PI)
-            current_yaw += 2 * M_PI;
-        while (current_yaw > last_yaw + M_PI)
-            current_yaw -= 2 * M_PI;
-        float angular_diff = current_yaw - last_yaw;
-        odom_.twist.twist.angular.z = angular_diff / step_time;
-    }
-    last_odom_pose_ = pose;
+    math::Vector3 linear_velocity = parent_->GetRelativeLinearVel();
+    odom.twist.twist.linear.x = linear_velocity.x;
+    odom.twist.twist.linear.y = linear_velocity.y;
+    odom.twist.twist.linear.z = linear_velocity.z;
 
-    // convert velocity to child_frame_id (aka base_footprint)
-    float yaw = pose.rot.GetYaw();
-    odom_.twist.twist.linear.x = cosf(yaw) * linear.x + sinf(yaw) * linear.y;
-    odom_.twist.twist.linear.y = cosf(yaw) * linear.y - sinf(yaw) * linear.x;
+    math::Vector3 rot_velocity = parent_->GetRelativeAngularVel();
+    odom.twist.twist.angular.x = rot_velocity.x;
+    odom.twist.twist.angular.y = rot_velocity.y;
+    odom.twist.twist.angular.z = rot_velocity.z;
 
-    odom_.header.stamp = current_time;
-    odom_.header.frame_id = odometry_frame_;
-    odom_.child_frame_id = robot_base_frame_;
+    odom.header.stamp = current_time;
+    odom.header.frame_id = odometry_frame_;
+    odom.child_frame_id = robot_base_frame_;
 
-    odometry_pub_.publish(odom_);
+    odometry_pub_.publish(odom);
 }
 
 GZ_REGISTER_MODEL_PLUGIN(PlanarMove)
