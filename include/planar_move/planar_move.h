@@ -66,7 +66,6 @@ class PlanarMove : public ModelPlugin
     bool alive_;
 
     double gz_time_last;
-
 };
 
 }  // namespace gazebo

@@ -127,7 +127,7 @@ void PlanarMove::UpdateChild()
 {
     std::lock_guard<std::mutex> lock(lock_);
 
-    if (control_mode_ == "position") // Position control mode
+    if (control_mode_ == "position")  // Position control mode
     {
         // Get the simulation time and period
         double gz_time_now = parent_->GetWorld()->GetSimTime().Double();
@@ -141,11 +141,11 @@ void PlanarMove::UpdateChild()
         // ROS_INFO_STREAM("Command: x:" << x_ << " y:" << y_ << " rotZ:" << rot_);
         // ROS_INFO_STREAM("Current Pose: x:" <<  current_pose.pos.x << " y:" <<  current_pose.pos.y << " Yaw:" <<  current_pose.rot.GetYaw());
 
-        //Forward velocity component (x)
+        // Forward velocity component (x)
         new_pose.pos.x = current_pose.pos.x+ dt*x_*cos(current_yaw);  // We need to do this so dx and dy are in world frame
         new_pose.pos.y = current_pose.pos.y+ dt*x_*sin(current_yaw);  // since cmd_vel is in robot frame
 
-        //Strafing velocity component (y)
+        // Strafing velocity component (y)
         new_pose.pos.x = new_pose.pos.x - dt*y_*cos(M_PI / 2 - current_yaw);  // We need to do this so dx and dy are in world frame
         new_pose.pos.y = new_pose.pos.y + dt*y_*sin(M_PI / 2 - current_yaw);  // since cmd_vel is in robot frame
         new_pose.rot.SetFromEuler(0.0, 0.0, current_yaw + dt * rot_);
@@ -161,7 +161,7 @@ void PlanarMove::UpdateChild()
             parent_->SetLinkWorldPose(new_pose, base_link);
         }
     }
-    else if (control_mode_ == "velocity") //Velocity control mode
+    else if (control_mode_ == "velocity")  // Velocity control mode
     {
         if (new_cmd_)
         {
@@ -220,38 +220,38 @@ void PlanarMove::publishOdometry()
 
     tf::Transform base_footprint_to_odom(qt, vt);
     transform_broadcaster_.sendTransform(tf::StampedTransform(base_footprint_to_odom, current_time, odometry_frame_, robot_base_frame_));
-//
-//    // publish odom topic
-//    nav_msgs::Odometry odom;
-//    odom.pose.pose.position.x = pose.pos.x;
-//    odom.pose.pose.position.y = pose.pos.y;
-//
-//    odom.pose.pose.orientation.x = pose.rot.x;
-//    odom.pose.pose.orientation.y = pose.rot.y;
-//    odom.pose.pose.orientation.z = pose.rot.z;
-//    odom.pose.pose.orientation.w = pose.rot.w;
-//    odom.pose.covariance[0] = 0.00001;
-//    odom.pose.covariance[7] = 0.00001;
-//    odom.pose.covariance[14] = 1000000000000.0;
-//    odom.pose.covariance[21] = 1000000000000.0;
-//    odom.pose.covariance[28] = 1000000000000.0;
-//    odom.pose.covariance[35] = 0.001;
-//
-//    math::Vector3 linear_velocity = parent_->GetRelativeLinearVel();
-//    odom.twist.twist.linear.x = linear_velocity.x;
-//    odom.twist.twist.linear.y = linear_velocity.y;
-//    odom.twist.twist.linear.z = linear_velocity.z;
-//
-//    math::Vector3 rot_velocity = parent_->GetRelativeAngularVel();
-//    odom.twist.twist.angular.x = rot_velocity.x;
-//    odom.twist.twist.angular.y = rot_velocity.y;
-//    odom.twist.twist.angular.z = rot_velocity.z;
-//
-//    odom.header.stamp = current_time;
-//    odom.header.frame_id = odometry_frame_;
-//    odom.child_frame_id = robot_base_frame_;
-//
-//    odometry_pub_.publish(odom);
+
+    // publish odom topic
+    nav_msgs::Odometry odom;
+    odom.pose.pose.position.x = pose.pos.x;
+    odom.pose.pose.position.y = pose.pos.y;
+
+    odom.pose.pose.orientation.x = pose.rot.x;
+    odom.pose.pose.orientation.y = pose.rot.y;
+    odom.pose.pose.orientation.z = pose.rot.z;
+    odom.pose.pose.orientation.w = pose.rot.w;
+    odom.pose.covariance[0] = 0.00001;
+    odom.pose.covariance[7] = 0.00001;
+    odom.pose.covariance[14] = 1000000000000.0;
+    odom.pose.covariance[21] = 1000000000000.0;
+    odom.pose.covariance[28] = 1000000000000.0;
+    odom.pose.covariance[35] = 0.001;
+
+    math::Vector3 linear_velocity = parent_->GetRelativeLinearVel();
+    odom.twist.twist.linear.x = linear_velocity.x;
+    odom.twist.twist.linear.y = linear_velocity.y;
+    odom.twist.twist.linear.z = linear_velocity.z;
+
+    math::Vector3 rot_velocity = parent_->GetRelativeAngularVel();
+    odom.twist.twist.angular.x = rot_velocity.x;
+    odom.twist.twist.angular.y = rot_velocity.y;
+    odom.twist.twist.angular.z = rot_velocity.z;
+
+    odom.header.stamp = current_time;
+    odom.header.frame_id = odometry_frame_;
+    odom.child_frame_id = robot_base_frame_;
+
+    odometry_pub_.publish(odom);
 }
 
 GZ_REGISTER_MODEL_PLUGIN(PlanarMove)
