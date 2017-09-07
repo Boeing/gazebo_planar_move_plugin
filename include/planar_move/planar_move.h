@@ -66,6 +66,9 @@ class PlanarMove : public ModelPlugin
     bool alive_;
 
     double gz_time_last;
+
+    std::vector<physics::LinkPtr> links_list_;
+    physics::LinkPtr base_link_;
 };
 
 }  // namespace gazebo

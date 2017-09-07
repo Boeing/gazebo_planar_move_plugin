@@ -121,6 +121,10 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     // listen to the update event (broadcast every simulation iteration)
     gz_time_last = 0.0;
     update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&PlanarMove::UpdateChild, this));
+
+    links_list_ = parent_->GetLinks();
+    base_link_ = parent_->GetLink(robot_base_frame_);
+
 }
 
 void PlanarMove::UpdateChild()
@@ -150,15 +154,19 @@ void PlanarMove::UpdateChild()
         new_pose.pos.y = new_pose.pos.y + dt*y_*sin(M_PI / 2 - current_yaw);  // since cmd_vel is in robot frame
         new_pose.rot.SetFromEuler(0.0, 0.0, current_yaw + dt * rot_);
 
-        physics::LinkPtr base_link = parent_->GetLink(robot_base_frame_);
-        if (base_link == NULL)
+        if (base_link_ == NULL)
         {
             ROS_FATAL_THROTTLE(1, "Model has no link named 'base link'");
         }
         else
         {
             // ROS_INFO_STREAM("Setting link, dt is:" << dt << " new x:" << new_pose.pos.x << " new y:" << new_pose.pos.y << " new yaw:" << new_pose.rot.GetYaw());
-            parent_->SetLinkWorldPose(new_pose, base_link);
+            parent_->SetLinkWorldPose(new_pose, base_link_);
+            // Hack disables physics, required after call to any physics related function call
+            for (physics::LinkPtr link : links_list_)
+            {
+                link->SetEnabled(false);
+            }
         }
     }
     else if (control_mode_ == "velocity")  // Velocity control mode
