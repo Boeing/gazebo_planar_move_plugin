@@ -124,7 +124,6 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
 
     links_list_ = parent_->GetLinks();
     base_link_ = parent_->GetLink(robot_base_frame_);
-
 }
 
 void PlanarMove::UpdateChild()

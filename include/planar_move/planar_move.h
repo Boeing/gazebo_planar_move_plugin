@@ -6,7 +6,7 @@
 #include <thread>
 #include <string>
 #include <atomic>
-
+#include <vector>
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
 #include <sdf/sdf.hh>
