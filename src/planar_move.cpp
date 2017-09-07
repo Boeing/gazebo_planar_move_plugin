@@ -107,7 +107,7 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     }
     rosnode_.reset(new ros::NodeHandle(robot_namespace_));
 
-    // subscribe to the odometry topic
+    // subscribe to the cmd_vel topic
     ros::SubscribeOptions so =
         ros::SubscribeOptions::create<geometry_msgs::Twist>(command_topic_, 1,
                                                             boost::bind(&PlanarMove::cmdVelCallback, this, _1),
