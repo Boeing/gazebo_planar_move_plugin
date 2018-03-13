@@ -31,7 +31,7 @@ include_directories(
 )
 
 add_library(${PROJECT_NAME}
-    include/planar_move/planar_move.h
+    include/${PROJECT_NAME}/planar_move.h
     src/planar_move.cpp
 )
 
