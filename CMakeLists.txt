@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(planar_move)
+project(gazebo_planar_move)
 
 add_definitions(-std=c++11)
 

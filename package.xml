@@ -1,5 +1,5 @@
 <package>
-    <name>planar_move</name>
+    <name>gazebo_planar_move</name>
     <version>0.1.0</version>
     <description>Planar move of objects in gazebo</description>
     <maintainer email="Phillip.Haeusler@boeing.com">Boeing</maintainer>
