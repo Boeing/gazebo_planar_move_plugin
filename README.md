@@ -1,4 +1,4 @@
-# universal_robot
+# gazebo_planar_move
 
 ## Installation
 
