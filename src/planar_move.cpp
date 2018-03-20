@@ -133,25 +133,25 @@ void PlanarMove::UpdateChild()
     if (control_mode_ == "position")  // Position control mode
     {
         // Get the simulation time and period
-        double gz_time_now = parent_->GetWorld()->GetSimTime().Double();
+        double gz_time_now = parent_->GetWorld()->SimTime().Double();
         double dt =  gz_time_now - gz_time_last;
         gz_time_last =  gz_time_now;
 
-        math::Pose current_pose = parent_->GetWorldPose();
-        math::Pose new_pose;
-        double current_yaw = current_pose.rot.GetYaw();
+        ignition::math::Pose3d current_pose = parent_->WorldPose();
+        ignition::math::Pose3d new_pose;
+        double current_yaw = current_pose.Rot().Yaw();
 
         // ROS_INFO_STREAM("Command: x:" << x_ << " y:" << y_ << " rotZ:" << rot_);
         // ROS_INFO_STREAM("Current Pose: x:" <<  current_pose.pos.x << " y:" <<  current_pose.pos.y << " Yaw:" <<  current_pose.rot.GetYaw());
 
         // Forward velocity component (x)
-        new_pose.pos.x = current_pose.pos.x+ dt*x_*cos(current_yaw);  // We need to do this so dx and dy are in world frame
-        new_pose.pos.y = current_pose.pos.y+ dt*x_*sin(current_yaw);  // since cmd_vel is in robot frame
+        new_pose.Pos().X() = current_pose.Pos().X()+ dt*x_*cos(current_yaw);  // We need to do this so dx and dy are in world frame
+        new_pose.Pos().Y() = current_pose.Pos().Y()+ dt*x_*sin(current_yaw);  // since cmd_vel is in robot frame
 
         // Strafing velocity component (y)
-        new_pose.pos.x = new_pose.pos.x - dt*y_*cos(M_PI / 2 - current_yaw);  // We need to do this so dx and dy are in world frame
-        new_pose.pos.y = new_pose.pos.y + dt*y_*sin(M_PI / 2 - current_yaw);  // since cmd_vel is in robot frame
-        new_pose.rot.SetFromEuler(0.0, 0.0, current_yaw + dt * rot_);
+        new_pose.Pos().X() = new_pose.Pos().X() - dt*y_*cos(M_PI / 2 - current_yaw);  // We need to do this so dx and dy are in world frame
+        new_pose.Pos().Y() = new_pose.Pos().Y() + dt*y_*sin(M_PI / 2 - current_yaw);  // since cmd_vel is in robot frame
+        new_pose.Rot().Euler(0.0, 0.0, current_yaw + dt * rot_);
 
         if (base_link_ == NULL)
         {
@@ -172,10 +172,10 @@ void PlanarMove::UpdateChild()
     {
         if (new_cmd_)
         {
-            math::Pose pose = parent_->GetWorldPose();
-            float yaw = pose.rot.GetYaw();
-            parent_->SetLinearVel(math::Vector3(x_ * cosf(yaw) - y_ * sinf(yaw), y_ * cosf(yaw) + x_ * sinf(yaw), 0));
-            parent_->SetAngularVel(math::Vector3(0, 0, rot_));
+            ignition::math::Pose3d pose = parent_->WorldPose();
+            float yaw = pose.Rot().Yaw();
+            parent_->SetLinearVel(ignition::math::Vector3d(x_ * cosf(yaw) - y_ * sinf(yaw), y_ * cosf(yaw) + x_ * sinf(yaw), 0));
+            parent_->SetAngularVel(ignition::math::Vector3d(0, 0, rot_));
             new_cmd_ = false;
         }
     }
@@ -220,23 +220,23 @@ void PlanarMove::publishOdometry()
     ros::Time current_time = ros::Time::now();
 
     // getting data for base_footprint to odom transform
-    math::Pose pose = parent_->GetWorldPose();
+    ignition::math::Pose3d pose = parent_->WorldPose();
 
-    tf::Quaternion qt(pose.rot.x, pose.rot.y, pose.rot.z, pose.rot.w);
-    tf::Vector3 vt(pose.pos.x, pose.pos.y, pose.pos.z);
+    tf::Quaternion qt(pose.Rot().X(), pose.Rot().Y(), pose.Rot().Z(), pose.Rot().W());
+    tf::Vector3 vt(pose.Pos().X(), pose.Pos().Y(), pose.Pos().Z());
 
     tf::Transform base_footprint_to_odom(qt, vt);
     transform_broadcaster_.sendTransform(tf::StampedTransform(base_footprint_to_odom, current_time, odometry_frame_, robot_base_frame_));
 
     // publish odom topic
     nav_msgs::Odometry odom;
-    odom.pose.pose.position.x = pose.pos.x;
-    odom.pose.pose.position.y = pose.pos.y;
+    odom.pose.pose.position.x = pose.Pos().X();
+    odom.pose.pose.position.y = pose.Pos().Y();
 
-    odom.pose.pose.orientation.x = pose.rot.x;
-    odom.pose.pose.orientation.y = pose.rot.y;
-    odom.pose.pose.orientation.z = pose.rot.z;
-    odom.pose.pose.orientation.w = pose.rot.w;
+    odom.pose.pose.orientation.x = pose.Rot().X();
+    odom.pose.pose.orientation.y = pose.Rot().Y();
+    odom.pose.pose.orientation.z = pose.Rot().Z();
+    odom.pose.pose.orientation.w = pose.Rot().W();
     odom.pose.covariance[0] = 0.00001;
     odom.pose.covariance[7] = 0.00001;
     odom.pose.covariance[14] = 1000000000000.0;
@@ -244,15 +244,15 @@ void PlanarMove::publishOdometry()
     odom.pose.covariance[28] = 1000000000000.0;
     odom.pose.covariance[35] = 0.001;
 
-    math::Vector3 linear_velocity = parent_->GetRelativeLinearVel();
-    odom.twist.twist.linear.x = linear_velocity.x;
-    odom.twist.twist.linear.y = linear_velocity.y;
-    odom.twist.twist.linear.z = linear_velocity.z;
+    ignition::math::Vector3d linear_velocity = parent_->RelativeLinearVel();
+    odom.twist.twist.linear.x = linear_velocity.X();
+    odom.twist.twist.linear.y = linear_velocity.Y();
+    odom.twist.twist.linear.z = linear_velocity.Z();
 
-    math::Vector3 rot_velocity = parent_->GetRelativeAngularVel();
-    odom.twist.twist.angular.x = rot_velocity.x;
-    odom.twist.twist.angular.y = rot_velocity.y;
-    odom.twist.twist.angular.z = rot_velocity.z;
+    ignition::math::Vector3d rot_velocity = parent_->RelativeAngularVel();
+    odom.twist.twist.angular.x = rot_velocity.X();
+    odom.twist.twist.angular.y = rot_velocity.Y();
+    odom.twist.twist.angular.z = rot_velocity.Z();
 
     odom.header.stamp = current_time;
     odom.header.frame_id = odometry_frame_;
