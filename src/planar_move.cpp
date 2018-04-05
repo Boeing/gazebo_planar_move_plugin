@@ -1,5 +1,5 @@
 // Copyright 2018 Boeing
-#include <gazebo_planar_move/planar_move.h>
+#include <gazebo_planar_move_plugin/planar_move.h>
 
 #include <boost/bind.hpp>
 #include <geometry_msgs/Twist.h>
