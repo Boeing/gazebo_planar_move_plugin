@@ -17,6 +17,7 @@ catkin_package(
     CATKIN_DEPENDS
         gazebo_ros
         geometry_msgs
+        nav_msgs
         roscpp
         tf
     INCLUDE_DIRS include
