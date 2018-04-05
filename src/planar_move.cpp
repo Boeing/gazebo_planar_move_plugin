@@ -1,10 +1,10 @@
 // Copyright 2018 Boeing
 #include <gazebo_planar_move/planar_move.h>
 
-#include <string>
-#include <math.h>
 #include <boost/bind.hpp>
 #include <geometry_msgs/Twist.h>
+#include <math.h>
+#include <string>
 
 #include <ros/advertise_options.h>
 
@@ -99,19 +99,18 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     // Ensure that ROS has been initialized and subscribe to cmd_vel
     if (!ros::isInitialized())
     {
-        ROS_FATAL_STREAM_NAMED("planar_move", "PlanarMovePlugin (ns = " << robot_namespace_
-                                                                        << "). A ROS node for Gazebo has not been initialized, "
-                                                                        << "unable to load plugin. Load the Gazebo system plugin "
-                                                                        << "'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
+        ROS_FATAL_STREAM_NAMED("planar_move",
+                               "PlanarMovePlugin (ns = " << robot_namespace_
+                                                         << "). A ROS node for Gazebo has not been initialized, "
+                                                         << "unable to load plugin. Load the Gazebo system plugin "
+                                                         << "'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
         return;
     }
     rosnode_.reset(new ros::NodeHandle(robot_namespace_));
 
     // subscribe to the cmd_vel topic
-    ros::SubscribeOptions so =
-        ros::SubscribeOptions::create<geometry_msgs::Twist>(command_topic_, 1,
-                                                            boost::bind(&PlanarMove::cmdVelCallback, this, _1),
-                                                            ros::VoidPtr(), &queue_);
+    ros::SubscribeOptions so = ros::SubscribeOptions::create<geometry_msgs::Twist>(
+        command_topic_, 1, boost::bind(&PlanarMove::cmdVelCallback, this, _1), ros::VoidPtr(), &queue_);
 
     vel_sub_ = rosnode_->subscribe(so);
     odometry_pub_ = rosnode_->advertise<nav_msgs::Odometry>(odometry_topic_, 1);
@@ -134,23 +133,26 @@ void PlanarMove::UpdateChild()
     {
         // Get the simulation time and period
         double gz_time_now = parent_->GetWorld()->GetSimTime().Double();
-        double dt =  gz_time_now - gz_time_last;
-        gz_time_last =  gz_time_now;
+        double dt = gz_time_now - gz_time_last;
+        gz_time_last = gz_time_now;
 
         math::Pose current_pose = parent_->GetWorldPose();
         math::Pose new_pose;
         double current_yaw = current_pose.rot.GetYaw();
 
         // ROS_INFO_STREAM("Command: x:" << x_ << " y:" << y_ << " rotZ:" << rot_);
-        // ROS_INFO_STREAM("Current Pose: x:" <<  current_pose.pos.x << " y:" <<  current_pose.pos.y << " Yaw:" <<  current_pose.rot.GetYaw());
+        // ROS_INFO_STREAM("Current Pose: x:" <<  current_pose.pos.x << " y:" <<  current_pose.pos.y << " Yaw:" <<
+        // current_pose.rot.GetYaw());
 
         // Forward velocity component (x)
-        new_pose.pos.x = current_pose.pos.x+ dt*x_*cos(current_yaw);  // We need to do this so dx and dy are in world frame
-        new_pose.pos.y = current_pose.pos.y+ dt*x_*sin(current_yaw);  // since cmd_vel is in robot frame
+        new_pose.pos.x =
+            current_pose.pos.x + dt * x_ * cos(current_yaw);  // We need to do this so dx and dy are in world frame
+        new_pose.pos.y = current_pose.pos.y + dt * x_ * sin(current_yaw);  // since cmd_vel is in robot frame
 
         // Strafing velocity component (y)
-        new_pose.pos.x = new_pose.pos.x - dt*y_*cos(M_PI / 2 - current_yaw);  // We need to do this so dx and dy are in world frame
-        new_pose.pos.y = new_pose.pos.y + dt*y_*sin(M_PI / 2 - current_yaw);  // since cmd_vel is in robot frame
+        new_pose.pos.x = new_pose.pos.x -
+                         dt * y_ * cos(M_PI / 2 - current_yaw);  // We need to do this so dx and dy are in world frame
+        new_pose.pos.y = new_pose.pos.y + dt * y_ * sin(M_PI / 2 - current_yaw);  // since cmd_vel is in robot frame
         new_pose.rot.SetFromEuler(0.0, 0.0, current_yaw + dt * rot_);
 
         if (base_link_ == NULL)
@@ -159,7 +161,8 @@ void PlanarMove::UpdateChild()
         }
         else
         {
-            // ROS_INFO_STREAM("Setting link, dt is:" << dt << " new x:" << new_pose.pos.x << " new y:" << new_pose.pos.y << " new yaw:" << new_pose.rot.GetYaw());
+            // ROS_INFO_STREAM("Setting link, dt is:" << dt << " new x:" << new_pose.pos.x << " new y:" <<
+            // new_pose.pos.y << " new yaw:" << new_pose.rot.GetYaw());
             parent_->SetLinkWorldPose(new_pose, base_link_);
             // Hack disables physics, required after call to any physics related function call
             for (physics::LinkPtr link : links_list_)
@@ -196,7 +199,7 @@ void PlanarMove::FiniChild()
     callback_queue_thread_.join();
 }
 
-void PlanarMove::cmdVelCallback(const geometry_msgs::Twist::ConstPtr &cmd_msg)
+void PlanarMove::cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg)
 {
     // Note there is no mechanism to zero cmd_vel's. move_base or cmd_vel mux should send 0
     new_cmd_ = true;
@@ -226,7 +229,8 @@ void PlanarMove::publishOdometry()
     tf::Vector3 vt(pose.pos.x, pose.pos.y, pose.pos.z);
 
     tf::Transform base_footprint_to_odom(qt, vt);
-    transform_broadcaster_.sendTransform(tf::StampedTransform(base_footprint_to_odom, current_time, odometry_frame_, robot_base_frame_));
+    transform_broadcaster_.sendTransform(
+        tf::StampedTransform(base_footprint_to_odom, current_time, odometry_frame_, robot_base_frame_));
 
     // publish odom topic
     nav_msgs::Odometry odom;

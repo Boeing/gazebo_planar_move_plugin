@@ -4,21 +4,21 @@ project(gazebo_planar_move)
 add_definitions(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS
-    roscpp
-    std_msgs
     geometry_msgs
     nav_msgs
+    roscpp
     tf
-    roslint
 )
 
 find_package(gazebo REQUIRED)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
-link_directories(${GAZEBO_LIBRARY_DIRS})
 
 catkin_package(
     DEPENDS gazebo
-    CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs tf
+    CATKIN_DEPENDS
+        roscpp
+        std_msgs
+        geometry_msgs
+        tf
     INCLUDE_DIRS include
     LIBRARIES ${PROJECT_NAME}
 )
@@ -49,5 +49,7 @@ install(TARGETS
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-set(ROSLINT_CPP_OPTS  "--filter=-whitespace/line_length,-readability/todo,-runtime/references,-build/c++11" )
-roslint_cpp()
+if(CATKIN_ENABLE_TESTING)
+    find_package(rostest REQUIRED)
+    add_rostest(test/test_plugin.test)
+endif()

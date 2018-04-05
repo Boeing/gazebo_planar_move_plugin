@@ -2,19 +2,19 @@
 #ifndef GAZEBO_PLANAR_MOVE_PLANAR_MOVE_H
 #define GAZEBO_PLANAR_MOVE_PLANAR_MOVE_H
 
-#include <mutex>
-#include <thread>
-#include <string>
 #include <atomic>
-#include <vector>
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
+#include <mutex>
 #include <sdf/sdf.hh>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include <nav_msgs/Odometry.h>
 
-#include <ros/ros.h>
 #include <ros/callback_queue.h>
+#include <ros/ros.h>
 
 #include <tf/transform_broadcaster.h>
 
@@ -34,7 +34,7 @@ class PlanarMove : public ModelPlugin
 
   private:
     void publishOdometry();
-    void cmdVelCallback(const geometry_msgs::Twist::ConstPtr &cmd_msg);
+    void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
 
     physics::ModelPtr parent_;
     event::ConnectionPtr update_connection_;
