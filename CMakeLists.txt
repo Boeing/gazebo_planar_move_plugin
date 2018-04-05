@@ -4,6 +4,7 @@ project(gazebo_planar_move_plugin)
 add_definitions(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS
+    gazebo_ros
     geometry_msgs
     nav_msgs
     roscpp
@@ -13,11 +14,10 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(gazebo REQUIRED)
 
 catkin_package(
-    DEPENDS gazebo
     CATKIN_DEPENDS
-        roscpp
-        std_msgs
+        gazebo_ros
         geometry_msgs
+        roscpp
         tf
     INCLUDE_DIRS include
     LIBRARIES ${PROJECT_NAME}
