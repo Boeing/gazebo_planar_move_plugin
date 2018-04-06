@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(gazebo_planar_move)
+project(gazebo_planar_move_plugin)
 
 add_definitions(-std=c++11)
 
@@ -31,8 +31,8 @@ include_directories(
 )
 
 add_library(${PROJECT_NAME}
-    include/${PROJECT_NAME}/planar_move.h
-    src/planar_move.cpp
+    include/${PROJECT_NAME}/gazebo_planar_move_plugin.h
+        src/gazebo_planar_move_plugin.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES})

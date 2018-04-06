@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<robot name="test_robot">
+
+    <gazebo>
+        <plugin name="set_planar_move_plugin" filename="libgazebo_planar_move_plugin.so">
+            <robotNamespace>/</robotNamespace>
+            <robotBaseFrame>base_link</robotBaseFrame>
+            <odometryFrame>odom</odometryFrame>
+            <odometryTopic>odom</odometryTopic>
+            <commandTopic>cmd_vel</commandTopic>
+            <controlMode>velocity</controlMode>
+        </plugin>
+    </gazebo>
+
+
+    <link name="base_link">
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="1 1 1"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="1 1 1"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="1"/>
+            <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+        </inertial>
+    </link>
+
+
+
+
+
+
+
+</robot>
