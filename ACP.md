@@ -1,8 +1,8 @@
 # Project Access Control Policy
 
-Project Name: gazebo_planar_move
+Project Name: gazebo_planar_move_plugin
 
-Project URL: https://git.web.boeing.com/robotics/ros/gazebo_planar_move
+Project URL: https://git.web.boeing.com/robotics/ros/gazebo_planar_move_plugin
 
 Project Owner(s): Richard Bain (richard.j.bain@boeing.com)
 

@@ -2,11 +2,18 @@
 <robot name="test_robot">
 
     <gazebo>
-        <plugin name="planar_move" filename="libgazebo_planar_move_plugin.so">
+        <plugin name="set_planar_move_plugin" filename="libgazebo_planar_move_plugin.so">
+            <robotNamespace>/</robotNamespace>
+            <robotBaseFrame>base_link</robotBaseFrame>
+            <odometryFrame>odom</odometryFrame>
+            <odometryTopic>odom</odometryTopic>
+            <commandTopic>cmd_vel</commandTopic>
+            <controlMode>velocity</controlMode>
         </plugin>
     </gazebo>
 
     <link name="base_link">
+
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
@@ -25,6 +32,5 @@
             <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
         </inertial>
     </link>
-
 
 </robot>

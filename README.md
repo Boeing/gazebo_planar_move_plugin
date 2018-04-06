@@ -1,4 +1,4 @@
-# gazebo_planar_move
+# gazebo_planar_move_plugin
 
 ## Installation
 
@@ -9,7 +9,7 @@ Look at the included dockerfile.
 ### Manually
 
 ```bash
-git clone https://git.web.boeing.com/robotics/ros/gazebo_planar_move
+git clone https://git.web.boeing.com/robotics/ros/gazebo_planar_move_plugin
 ```
 
 ### With a .rosinstall file
@@ -17,7 +17,7 @@ git clone https://git.web.boeing.com/robotics/ros/gazebo_planar_move
 Add the following to a .rosinstall file:
 
 ```yaml
-- git: {local-name: gazebo_planar_move, uri: 'https://git.web.boeing.com/robotics/ros/gazebo_planar_move'}
+- git: {local-name: gazebo_planar_move, uri: 'https://git.web.boeing.com/robotics/ros/gazebo_planar_move_plugin'}
 ```
 
 ```bash

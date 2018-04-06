@@ -30,7 +30,6 @@ class PlanarMove : public ModelPlugin
 
   protected:
     virtual void UpdateChild();
-    virtual void FiniChild();
 
   private:
     void publishOdometry();
@@ -39,7 +38,7 @@ class PlanarMove : public ModelPlugin
     physics::ModelPtr parent_;
     event::ConnectionPtr update_connection_;
 
-    std::unique_ptr<ros::NodeHandle> rosnode_;
+    ros::NodeHandle nh_;
     ros::Publisher odometry_pub_;
     ros::Subscriber vel_sub_;
 
@@ -65,7 +64,7 @@ class PlanarMove : public ModelPlugin
 
     bool alive_;
 
-    double gz_time_last;
+    double gz_time_last_;
 
     std::vector<physics::LinkPtr> links_list_;
     physics::LinkPtr base_link_;

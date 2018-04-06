@@ -14,7 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(gazebo REQUIRED)
 
 catkin_package(
-    CATKIN_DEPENDS
+        INCLUDE_DIRS include
+        LIBRARIES ${PROJECT_NAME}
+        CATKIN_DEPENDS
         gazebo_ros
         geometry_msgs
         nav_msgs
@@ -32,13 +34,14 @@ include_directories(
 )
 
 add_library(${PROJECT_NAME}
-    include/${PROJECT_NAME}/planar_move.h
-    src/planar_move.cpp
+    include/${PROJECT_NAME}/${PROJECT_NAME}.h
+    src/${PROJECT_NAME}.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES})
 
-install(DIRECTORY include/${PROJECT_NAME}/
+install(DIRECTORY
+    include/${PROJECT_NAME}/
     DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
     FILES_MATCHING PATTERN "*.h"
 )
@@ -48,6 +51,16 @@ install(TARGETS
     ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(DIRECTORY
+    test/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/test
+)
+
+catkin_install_python(PROGRAMS
+    test/test_plugin.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 if(CATKIN_ENABLE_TESTING)
