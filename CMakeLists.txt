@@ -22,7 +22,7 @@ catkin_package(
         gazebo_ros
         geometry_msgs
         nav_msgs
-        roscp
+        roscpp
         std_msgs
         tf
 )
