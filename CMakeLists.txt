@@ -5,11 +5,11 @@ add_definitions(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS
         gazebo_ros
+        geometry_msgs
+        nav_msgs
         roscpp
         roslint
         std_msgs
-        geometry_msgs
-        nav_msgs
         tf
         )
 
@@ -20,10 +20,10 @@ catkin_package(
         LIBRARIES ${PROJECT_NAME}
         CATKIN_DEPENDS
         gazebo_ros
-        roscpp
-        std_msgs
         geometry_msgs
         nav_msgs
+        roscp
+        std_msgs
         tf
 )
 
