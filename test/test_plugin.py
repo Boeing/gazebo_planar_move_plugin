@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
 import unittest
+
 import rospy
 import rostest
-from std_msgs.msg import Header
-from gazebo_msgs.srv import GetLinkState, GetLinkStateRequest, GetLinkStateResponse
+from gazebo_msgs.srv import GetLinkState
+from gazebo_msgs.srv import GetLinkStateRequest, GetLinkStateResponse
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import JointState
 
 
-class TestPlanarMovePlugin(unittest.TestCase):
+class TestPlugin(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.__get_link_state_srv = rospy.ServiceProxy(
@@ -23,7 +23,6 @@ class TestPlanarMovePlugin(unittest.TestCase):
         cls.__test_link_name = 'base_link'
 
     def test_set(self):
-
         # Test linear moves
         self.set_and_test_velocity(v_x=1.0,
                                    v_y=0.0,
@@ -102,4 +101,4 @@ class TestPlanarMovePlugin(unittest.TestCase):
 if __name__ == '__main__':
     rospy.init_node('test_plugin')
 
-    rostest.rosrun('planar_move_test', 'test_planar_move', TestPlanarMovePlugin)
+    rostest.rosrun('gazebo_planar_move_plugin', 'test_plugin', TestPlugin)

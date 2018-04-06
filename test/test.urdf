@@ -12,7 +12,6 @@
         </plugin>
     </gazebo>
 
-
     <link name="base_link">
 
         <visual>
@@ -33,11 +32,5 @@
             <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
         </inertial>
     </link>
-
-
-
-
-
-
 
 </robot>

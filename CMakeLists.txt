@@ -4,14 +4,12 @@ project(gazebo_planar_move_plugin)
 add_definitions(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS
-        gazebo_ros
-        geometry_msgs
-        nav_msgs
-        roscpp
-        roslint
-        std_msgs
-        tf
-        )
+    gazebo_ros
+    geometry_msgs
+    nav_msgs
+    roscpp
+    tf
+)
 
 find_package(gazebo REQUIRED)
 
@@ -23,8 +21,9 @@ catkin_package(
         geometry_msgs
         nav_msgs
         roscpp
-        std_msgs
         tf
+    INCLUDE_DIRS include
+    LIBRARIES ${PROJECT_NAME}
 )
 
 include_directories(
@@ -64,5 +63,7 @@ catkin_install_python(PROGRAMS
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         )
 
-set(ROSLINT_CPP_OPTS  "--filter=-whitespace/line_length,-readability/todo,-runtime/references,-build/c++11" )
-roslint_cpp()
+if(CATKIN_ENABLE_TESTING)
+    find_package(rostest REQUIRED)
+    add_rostest(test/test_plugin.test)
+endif()

@@ -4,6 +4,7 @@
     <version>0.1.0</version>
     <description>Planar move of objects in gazebo</description>
     <maintainer email="Jason.Cochrane@boeing.com">Boeing</maintainer>
+    <maintainer email="Phillip.Haeusler@boeing.com">Boeing</maintainer>
     <author>Boeing</author>
     <license>Boeing Proprietary</license>
 
@@ -12,14 +13,13 @@
     <depend>gazebo</depend>
     <depend>gazebo_ros</depend>
     <depend>roscpp</depend>
-    <depend>std_msgs</depend>
     <depend>geometry_msgs</depend>
     <depend>nav_msgs</depend>
     <depend>tf</depend>
-    <depend>roslint</depend>
+
+    <test_depend>rostest</test_depend>
 
     <export>
         <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}"/>
     </export>
-
 </package>

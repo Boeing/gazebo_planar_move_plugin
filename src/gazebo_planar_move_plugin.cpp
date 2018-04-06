@@ -11,14 +11,20 @@
 namespace gazebo
 {
 
-PlanarMove::PlanarMove()
+PlanarMove::PlanarMove() : x_(0), y_(0), rot_(0), alive_(false), gz_time_last_(0)
+
 {
 }
 
 PlanarMove::~PlanarMove()
 {
+    alive_ = false;
+    queue_.clear();
+    queue_.disable();
+    callback_queue_thread_.join();
 }
 
+// cppcheck-suppress unusedFunction
 void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
 {
     ROS_INFO("Initialising PlanarMove Plugin");
@@ -50,7 +56,9 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     odometry_topic_ = "odom";
     if (!sdf->HasElement("odometryTopic"))
     {
-        ROS_WARN_NAMED("planar_move", "PlanarMovePlugin (ns = %s) missing <odometryTopic>, defaults to \"%s\"",
+        ROS_WARN_NAMED("planar_move",
+                       "PlanarMovePlugin (ns = %s) missing <odometryTopic>, "
+                       "defaults to \"%s\"",
                        robot_namespace_.c_str(), odometry_topic_.c_str());
     }
     else
@@ -61,7 +69,9 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     odometry_frame_ = "odom";
     if (!sdf->HasElement("odometryFrame"))
     {
-        ROS_WARN_NAMED("planar_move", "PlanarMovePlugin (ns = %s) missing <odometryFrame>, defaults to \"%s\"",
+        ROS_WARN_NAMED("planar_move",
+                       "PlanarMovePlugin (ns = %s) missing <odometryFrame>, "
+                       "defaults to \"%s\"",
                        robot_namespace_.c_str(), odometry_frame_.c_str());
     }
     else
@@ -72,7 +82,9 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     robot_base_frame_ = "base_link";
     if (!sdf->HasElement("robotBaseFrame"))
     {
-        ROS_WARN_NAMED("planar_move", "PlanarMovePlugin (ns = %s) missing <robotBaseFrame>, defaults to \"%s\"",
+        ROS_WARN_NAMED("planar_move",
+                       "PlanarMovePlugin (ns = %s) missing <robotBaseFrame>, "
+                       "defaults to \"%s\"",
                        robot_namespace_.c_str(), robot_base_frame_.c_str());
     }
     else
@@ -106,19 +118,19 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
                                                          << "'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
         return;
     }
-    rosnode_.reset(new ros::NodeHandle(robot_namespace_));
+    nh_ = ros::NodeHandle(robot_namespace_);
 
     // subscribe to the cmd_vel topic
     ros::SubscribeOptions so = ros::SubscribeOptions::create<geometry_msgs::Twist>(
         command_topic_, 1, boost::bind(&PlanarMove::cmdVelCallback, this, _1), ros::VoidPtr(), &queue_);
 
-    vel_sub_ = rosnode_->subscribe(so);
-    odometry_pub_ = rosnode_->advertise<nav_msgs::Odometry>(odometry_topic_, 1);
+    vel_sub_ = nh_.subscribe(so);
+    odometry_pub_ = nh_.advertise<nav_msgs::Odometry>(odometry_topic_, 1);
 
     callback_queue_thread_ = std::thread(&PlanarMove::queueThread, this);
 
     // listen to the update event (broadcast every simulation iteration)
-    gz_time_last = 0.0;
+    gz_time_last_ = 0.0;
     update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&PlanarMove::UpdateChild, this));
 
     links_list_ = parent_->GetLinks();
@@ -133,48 +145,49 @@ void PlanarMove::UpdateChild()
 
     if (control_mode_ == "position")  // Position control mode
     {
-        // Get the simulation time and period
-        math::Pose current_pose = parent_->GetWorldPose();
-
+    // Get the simulation time and period
 #if GAZEBO_MAJOR_VERSION >= 8
         double gz_time_now = parent_->GetWorld()->SimTime().Double();
         ignition::math::Pose3d current_pose = parent_->WorldPose();
         double current_yaw = current_pose.Rot().Yaw();
         ignition::math::Pose3d new_pose;
 #else
+        math::Pose current_pose = parent_->GetWorldPose();
         double gz_time_now = parent_->GetWorld()->GetSimTime().Double();
         double current_yaw = current_pose.rot.GetYaw();
         math::Pose new_pose;
 #endif
-
-        double dt = gz_time_now - gz_time_last;
-        gz_time_last = gz_time_now;
+        double dt = gz_time_now - gz_time_last_;
+        gz_time_last_ = gz_time_now;
 
 // ROS_INFO_STREAM("Command: x:" << x_ << " y:" << y_ << " rotZ:" << rot_);
-// ROS_INFO_STREAM("Current Pose: x:" <<  current_pose.pos.x << " y:" <<  current_pose.pos.y << " Yaw:" <<
-// current_pose.rot.GetYaw());
+// ROS_INFO_STREAM("Current Pose: x:" <<  current_pose.pos.x << " y:" <<
+// current_pose.pos.y << " Yaw:" << current_pose.rot.GetYaw());
 
 // Forward velocity component (x)
 #if GAZEBO_MAJOR_VERSION >= 8
-        new_pose.Pos().X() =
-            current_pose.Pos().X() + dt * x_ * cos(current_yaw);  // We need to do this so dx and dy are in world frame
+        new_pose.Pos().X() = current_pose.Pos().X() + dt * x_ * cos(current_yaw);  // We need to do this so dx
+                                                                                   // and dy are in world
+                                                                                   // frame
         new_pose.Pos().Y() = current_pose.Pos().Y() + dt * x_ * sin(current_yaw);  // since cmd_vel is in robot frame
 
         // Strafing velocity component (y)
         new_pose.Pos().X() =
-            new_pose.Pos().X() -
-            dt * y_ * cos(M_PI / 2 - current_yaw);  // We need to do this so dx and dy are in world frame
+            new_pose.Pos().X() - dt * y_ * cos(M_PI / 2 - current_yaw);  // We need to do this so dx and
+                                                                         // dy are in world frame
         new_pose.Pos().Y() =
             new_pose.Pos().Y() + dt * y_ * sin(M_PI / 2 - current_yaw);  // since cmd_vel is in robot frame
         new_pose.Rot().Euler(0.0, 0.0, current_yaw + dt * rot_);
 #else
-        new_pose.pos.x =
-            current_pose.pos.x + dt * x_ * cos(current_yaw);  // We need to do this so dx and dy are in world frame
+        new_pose.pos.x = current_pose.pos.x + dt * x_ * cos(current_yaw);  // We need to do this so dx and
+                                                                           // dy are in world frame
         new_pose.pos.y = current_pose.pos.y + dt * x_ * sin(current_yaw);  // since cmd_vel is in robot frame
 
         // Strafing velocity component (y)
-        new_pose.pos.x = new_pose.pos.x -
-                         dt * y_ * cos(M_PI / 2 - current_yaw);  // We need to do this so dx and dy are in world frame
+        new_pose.pos.x = new_pose.pos.x - dt * y_ * cos(M_PI / 2 - current_yaw);  // We need to do
+                                                                                  // this so dx
+                                                                                  // and dy are in
+                                                                                  // world frame
         new_pose.pos.y = new_pose.pos.y + dt * y_ * sin(M_PI / 2 - current_yaw);  // since cmd_vel is in robot frame
         new_pose.rot.SetFromEuler(0.0, 0.0, current_yaw + dt * rot_);
 #endif
@@ -184,11 +197,13 @@ void PlanarMove::UpdateChild()
         }
         else
         {
-            // ROS_INFO_STREAM("Setting link, dt is:" << dt << " new x:" << new_pose.pos.x << " new y:" <<
-            // new_pose.pos.y << " new yaw:" << new_pose.rot.GetYaw());
+            // ROS_INFO_STREAM("Setting link, dt is:" << dt << " new x:" <<
+            // new_pose.pos.x << " new y:" << new_pose.pos.y << " new yaw:" <<
+            // new_pose.rot.GetYaw());
             parent_->SetLinkWorldPose(new_pose, base_link_);
 
-            // Hack disables physics, required after call to any physics related function call
+            // Hack disables physics, required after call to any physics related
+            // function call
             for (physics::LinkPtr link : links_list_)
             {
                 link->SetEnabled(false);
@@ -224,18 +239,10 @@ void PlanarMove::UpdateChild()
     publishOdometry();
 }
 
-void PlanarMove::FiniChild()
-{
-    alive_ = false;
-    queue_.clear();
-    queue_.disable();
-    rosnode_->shutdown();
-    callback_queue_thread_.join();
-}
-
 void PlanarMove::cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg)
 {
-    // Note there is no mechanism to zero cmd_vel's. move_base or cmd_vel mux should send 0
+    // Note there is no mechanism to zero cmd_vel's. move_base or cmd_vel mux
+    // should send 0
     new_cmd_ = true;
     std::lock_guard<std::mutex> lock(lock_);
     x_ = cmd_msg->linear.x;
@@ -246,7 +253,7 @@ void PlanarMove::cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg)
 void PlanarMove::queueThread()
 {
     const double timeout = 0.01;
-    while (alive_ && rosnode_->ok())
+    while (alive_ && nh_.ok())
     {
         queue_.callAvailable(ros::WallDuration(timeout));
     }
