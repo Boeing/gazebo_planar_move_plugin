@@ -30,7 +30,8 @@ void loadParam(sdf::ElementPtr sdf, TYPE& value, const TYPE& default_value, cons
 }
 }
 
-PlanarMove::PlanarMove() : x_(0), y_(0), rot_(0), alive_(false), gz_time_last_(0)
+PlanarMove::PlanarMove()
+    : x_(0), y_(0), rot_(0), publish_odometry_(false), publish_tf_(false), alive_(false), gz_time_last_(0)
 
 {
 }
