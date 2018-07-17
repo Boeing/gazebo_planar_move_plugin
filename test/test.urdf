@@ -3,12 +3,14 @@
 
     <gazebo>
         <plugin name="set_planar_move_plugin" filename="libgazebo_planar_move_plugin.so">
-            <robotNamespace>/</robotNamespace>
-            <robotBaseFrame>base_link</robotBaseFrame>
-            <odometryFrame>odom</odometryFrame>
-            <odometryTopic>odom</odometryTopic>
-            <commandTopic>cmd_vel</commandTopic>
-            <controlMode>velocity</controlMode>
+            <robot_namespace>/</robot_namespace>
+            <robot_frame>base_link</robot_frame>
+            <odometry_frame>odom</odometry_frame>
+            <odometry_topic>odom</odometry_topic>
+            <command_topic>cmd_vel</command_topic>
+            <control_mode>velocity</control_mode>
+            <publish_odometry>1</publish_odometry>
+            <publish_tf>1</publish_tf>
         </plugin>
     </gazebo>
 

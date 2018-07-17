@@ -32,7 +32,6 @@ class PlanarMove : public ModelPlugin
     virtual void UpdateChild();
 
   private:
-    void publishOdometry();
     void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
 
     physics::ModelPtr parent_;
@@ -52,6 +51,9 @@ class PlanarMove : public ModelPlugin
     std::string odometry_frame_;
     std::string robot_base_frame_;
     std::string control_mode_;
+
+    bool publish_odometry_;
+    bool publish_tf_;
 
     // Custom Callback Queue
     ros::CallbackQueue queue_;
