@@ -97,7 +97,11 @@ void PlanarMove::UpdateChild()
 {
     std::lock_guard<std::mutex> lock(lock_);
     const bool is_paused = parent_->GetWorld()->IsPaused();
+#if GAZEBO_MAJOR_VERSION >= 8
+    const bool is_physics_enabled = parent_->GetWorld()->PhysicsEnabled();
+#else
     const bool is_physics_enabled = parent_->GetWorld()->GetEnablePhysicsEngine();
+#endif
     parent_->GetWorld()->SetPaused(true);
 
     //
@@ -105,7 +109,7 @@ void PlanarMove::UpdateChild()
     //
     if (control_mode_ == "position")
     {
-    // Get the simulation time and period
+        // Get the simulation time and period
 #if GAZEBO_MAJOR_VERSION >= 8
         double gz_time_now = parent_->GetWorld()->SimTime().Double();
         ignition::math::Pose3d current_pose = parent_->WorldPose();
@@ -120,7 +124,7 @@ void PlanarMove::UpdateChild()
         double dt = gz_time_now - gz_time_last_;
         gz_time_last_ = gz_time_now;
 
-        // We need to do this so dx and dy are in world frame since cmd_vel is in robot frame
+// We need to do this so dx and dy are in world frame since cmd_vel is in robot frame
 #if GAZEBO_MAJOR_VERSION >= 8
         new_pose.Pos().X() = current_pose.Pos().X() + dt * x_ * cos(current_yaw);
         new_pose.Pos().Y() = current_pose.Pos().Y() + dt * x_ * sin(current_yaw);
@@ -228,7 +232,6 @@ void PlanarMove::UpdateChild()
 
 #if GAZEBO_MAJOR_VERSION >= 8
         // publish odom topic
-        nav_msgs::Odometry odom;
         odom.pose.pose.position.x = pose.Pos().X();
         odom.pose.pose.position.y = pose.Pos().Y();
         odom.pose.pose.orientation.x = pose.Rot().X();
