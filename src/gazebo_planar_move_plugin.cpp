@@ -109,7 +109,7 @@ void PlanarMove::UpdateChild()
     //
     if (control_mode_ == "position")
     {
-        // Get the simulation time and period
+    // Get the simulation time and period
 #if GAZEBO_MAJOR_VERSION >= 8
         double gz_time_now = parent_->GetWorld()->SimTime().Double();
         ignition::math::Pose3d current_pose = parent_->WorldPose();
