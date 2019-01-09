@@ -8,26 +8,31 @@ find_package(catkin REQUIRED COMPONENTS
     geometry_msgs
     nav_msgs
     roscpp
-    tf
+    tf2_geometry_msgs
+    tf2_ros
 )
 
 find_package(gazebo REQUIRED)
 
 catkin_package(
-        INCLUDE_DIRS include
-        LIBRARIES ${PROJECT_NAME}
-        CATKIN_DEPENDS
+    INCLUDE_DIRS include
+    LIBRARIES ${PROJECT_NAME}
+    CATKIN_DEPENDS
         gazebo_ros
         geometry_msgs
         nav_msgs
         roscpp
-        tf
-    INCLUDE_DIRS include
-    LIBRARIES ${PROJECT_NAME}
+        tf2_geometry_msgs
+        tf2_ros
+    INCLUDE_DIRS
+        include
+    LIBRARIES
+        ${PROJECT_NAME}
 )
 
-include_directories(
-    include
+include_directories(include)
+
+include_directories(SYSTEM
     ${catkin_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${GAZEBO_INCLUDE_DIRS}
@@ -38,7 +43,11 @@ add_library(${PROJECT_NAME}
     src/${PROJECT_NAME}.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}
+    ${GAZEBO_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${catkin_LIBRARIES}
+)
 
 install(DIRECTORY
     include/${PROJECT_NAME}/
@@ -53,14 +62,8 @@ install(TARGETS
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-install(DIRECTORY
-    test/
-    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/test
-)
-
-catkin_install_python(PROGRAMS
-    test/test_plugin.py
-    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+install(DIRECTORY test
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
 if(CATKIN_ENABLE_TESTING)

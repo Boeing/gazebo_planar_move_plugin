@@ -1,9 +1,14 @@
 #include <gazebo_planar_move_plugin/gazebo_planar_move_plugin.h>
 
 #include <boost/bind.hpp>
+#include <cmath>
 #include <geometry_msgs/Twist.h>
-#include <math.h>
 #include <string>
+
+#include <geometry_msgs/TransformStamped.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <ros/advertise_options.h>
 
@@ -47,8 +52,6 @@ PlanarMove::~PlanarMove()
 // cppcheck-suppress unusedFunction
 void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
 {
-    ROS_INFO("Initialising PlanarMove Plugin");
-
     parent_ = parent;
 
     loadParam(sdf, robot_namespace_, std::string("/"), std::string("robot_namespace"), robot_namespace_);
@@ -156,6 +159,7 @@ void PlanarMove::UpdateChild()
             }
         }
     }
+
     //
     // Velocity control mode
     //
@@ -195,19 +199,20 @@ void PlanarMove::UpdateChild()
     if (publish_tf_)
     {
 #if GAZEBO_MAJOR_VERSION >= 8
-        tf::Quaternion qt(pose.Rot().X(), pose.Rot().Y(), pose.Rot().Z(), pose.Rot().W());
-        tf::Vector3 vt(pose.Pos().X(), pose.Pos().Y(), pose.Pos().Z());
-        tf::Transform base_footprint_to_odom(qt, vt);
-        transform_broadcaster_.sendTransform(
-            tf::StampedTransform(base_footprint_to_odom, current_time, odometry_frame_, robot_base_frame_));
-
+        const tf2::Quaternion qt(pose.Rot().X(), pose.Rot().Y(), pose.Rot().Z(), pose.Rot().W());
+        const tf2::Vector3 vt(pose.Pos().X(), pose.Pos().Y(), pose.Pos().Z());
 #else
-        tf::Quaternion qt(pose.rot.x, pose.rot.y, pose.rot.z, pose.rot.w);
-        tf::Vector3 vt(pose.pos.x, pose.pos.y, pose.pos.z);
-        tf::Transform base_footprint_to_odom(qt, vt);
-        transform_broadcaster_.sendTransform(
-            tf::StampedTransform(base_footprint_to_odom, current_time, odometry_frame_, robot_base_frame_));
+        const tf2::Quaternion qt(pose.rot.x, pose.rot.y, pose.rot.z, pose.rot.w);
+        const tf2::Vector3 vt(pose.pos.x, pose.pos.y, pose.pos.z);
 #endif
+        const tf2::Transform base_footprint_to_odom(qt, vt);
+
+        geometry_msgs::TransformStamped tr;
+        tr.header.stamp = current_time;
+        tr.header.frame_id = odometry_frame_;
+        tr.child_frame_id = robot_base_frame_;
+        tf2::convert(base_footprint_to_odom, tr.transform);
+        transform_broadcaster_.sendTransform(tr);
     }
 
     if (publish_odometry_)
