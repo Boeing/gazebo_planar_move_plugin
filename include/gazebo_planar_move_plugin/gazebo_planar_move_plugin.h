@@ -1,4 +1,3 @@
-// Copyright 2018 Boeing
 #ifndef GAZEBO_PLANAR_MOVE_PLANAR_MOVE_H
 #define GAZEBO_PLANAR_MOVE_PLANAR_MOVE_H
 
@@ -16,7 +15,7 @@
 #include <ros/callback_queue.h>
 #include <ros/ros.h>
 
-#include <tf/transform_broadcaster.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 namespace gazebo
 {
@@ -41,7 +40,7 @@ class PlanarMove : public ModelPlugin
     ros::Publisher odometry_pub_;
     ros::Subscriber vel_sub_;
 
-    tf::TransformBroadcaster transform_broadcaster_;
+    tf2_ros::TransformBroadcaster transform_broadcaster_;
 
     std::mutex lock_;
 

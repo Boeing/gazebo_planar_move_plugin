@@ -13,7 +13,7 @@
     <arg name="extra_gazebo_args" default=""/>
     <arg name="debug" default="false"/>
     <arg name="physics" default="ode"/>
-    <arg name="verbose" default="true"/>
+    <arg name="verbose" default="false"/>
     <arg name="paused" default="false"/>
     <arg name="recording" default="false"/>
     <arg unless="$(arg paused)" name="paused_arg" value=""/>
@@ -25,7 +25,7 @@
     <arg unless="$(arg debug)" name="debug_arg" value="gzserver"/>
     <arg if="$(arg debug)" name="debug_arg" value="debug"/>
 
-    <!-- Gazebo Server-->
+	<!-- Gazebo Server-->
     <node name="gazebo" pkg="gazebo_ros" type="$(arg debug_arg)" respawn="true" output="screen"
           args="$(arg paused_arg) $(arg recording_arg) $(arg verbose_arg) -e $(arg physics) $(arg extra_gazebo_args) $(arg world_name)">
     </node>
