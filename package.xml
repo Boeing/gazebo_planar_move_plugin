@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
     <name>gazebo_planar_move_plugin</name>
-    <version>0.1.0</version>
+    <version>0.0.0</version>
     <description>Planar move of objects in gazebo</description>
     <maintainer email="Jason.Cochrane@boeing.com">Boeing</maintainer>
     <maintainer email="Phillip.Haeusler@boeing.com">Boeing</maintainer>
