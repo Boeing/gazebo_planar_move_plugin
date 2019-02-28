@@ -35,18 +35,13 @@ void loadParam(sdf::ElementPtr sdf, TYPE& value, const TYPE& default_value, cons
 }
 }
 
-PlanarMove::PlanarMove()
-    : publish_odometry_(false), publish_tf_(false), x_(0), y_(0), rot_(0), alive_(false), gz_time_last_(0)
+PlanarMove::PlanarMove() : publish_odometry_(false), publish_tf_(false), x_(0), y_(0), rot_(0), gz_time_last_(0)
 
 {
 }
 
 PlanarMove::~PlanarMove()
 {
-    alive_ = false;
-    queue_.clear();
-    queue_.disable();
-    callback_queue_thread_.join();
 }
 
 // cppcheck-suppress unusedFunction
@@ -66,27 +61,11 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     x_ = 0;
     y_ = 0;
     rot_ = 0;
-    alive_ = true;
 
-    if (!ros::isInitialized())
-    {
-        ROS_FATAL_STREAM_NAMED("planar_move",
-                               "PlanarMovePlugin (ns = " << robot_namespace_
-                                                         << "). A ROS node for Gazebo has not been initialized, "
-                                                         << "unable to load plugin. Load the Gazebo system plugin "
-                                                         << "'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
-        return;
-    }
     nh_ = ros::NodeHandle(robot_namespace_);
 
-    // subscribe to the cmd_vel topic
-    ros::SubscribeOptions so = ros::SubscribeOptions::create<geometry_msgs::Twist>(
-        command_topic_, 1, boost::bind(&PlanarMove::cmdVelCallback, this, _1), ros::VoidPtr(), &queue_);
-
-    vel_sub_ = nh_.subscribe(so);
+    vel_sub_ = nh_.subscribe(command_topic_, 1, &PlanarMove::cmdVelCallback, this);
     odometry_pub_ = nh_.advertise<nav_msgs::Odometry>(odometry_topic_, 1);
-
-    callback_queue_thread_ = std::thread(&PlanarMove::queueThread, this);
 
     // listen to the update event (broadcast every simulation iteration)
     gz_time_last_ = 0.0;
@@ -304,15 +283,5 @@ void PlanarMove::cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg)
     rot_ = cmd_msg->angular.z;
 }
 
-void PlanarMove::queueThread()
-{
-    const double timeout = 0.01;
-    while (alive_ && nh_.ok())
-    {
-        queue_.callAvailable(ros::WallDuration(timeout));
-    }
-}
-
 GZ_REGISTER_MODEL_PLUGIN(PlanarMove)
-
-}  // namespace gazebo
+}

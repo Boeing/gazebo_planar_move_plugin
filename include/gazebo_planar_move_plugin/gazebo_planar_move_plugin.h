@@ -54,23 +54,16 @@ class PlanarMove : public ModelPlugin
     bool publish_odometry_;
     bool publish_tf_;
 
-    // Custom Callback Queue
-    ros::CallbackQueue queue_;
-    std::thread callback_queue_thread_;
-    void queueThread();
     std::atomic<bool> new_cmd_;
     double x_;
     double y_;
     double rot_;
-
-    bool alive_;
 
     double gz_time_last_;
 
     std::vector<physics::LinkPtr> links_list_;
     physics::LinkPtr base_link_;
 };
+}
 
-}  // namespace gazebo
-
-#endif  // GAZEBO_PLANAR_MOVE_PLANAR_MOVE_H
+#endif
