@@ -19,9 +19,9 @@ clang_format:
 
 build:
   stage: build
-  image: docker:latest
+  image: registry.web.boeing.com/robotics/continuous_integration/docker_builder
   script:
-    - wget --no-check-certificate -O - https://git.web.boeing.com/robotics/continuous_integration/raw/master/build_dockerfile.sh | sh
+    - generate_dockerfile
     - docker build -t ${CI_IMAGE} --build-arg PROJECT_NAME=${CI_PROJECT_NAME} --build-arg http_proxy=http://172.17.0.1:3128 --build-arg https_proxy=http://172.17.0.1:3128 .
   tags:
     - docker-executor
