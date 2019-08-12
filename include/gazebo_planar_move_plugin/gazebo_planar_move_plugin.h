@@ -38,6 +38,7 @@ class PlanarMove : public ModelPlugin
 
     ros::NodeHandle nh_;
     ros::Publisher odometry_pub_;
+    ros::Publisher imu_pub_;
     ros::Subscriber vel_sub_;
 
     tf2_ros::TransformBroadcaster transform_broadcaster_;
@@ -53,6 +54,7 @@ class PlanarMove : public ModelPlugin
 
     bool publish_odometry_;
     bool publish_tf_;
+    bool publish_imu_;
 
     std::atomic<bool> new_cmd_;
     double x_;
