@@ -14,10 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(gazebo REQUIRED)
+find_package(Boost REQUIRED)
 
 catkin_package(
-    INCLUDE_DIRS include
-    LIBRARIES ${PROJECT_NAME}
     CATKIN_DEPENDS
         gazebo_ros
         geometry_msgs
@@ -30,6 +29,9 @@ catkin_package(
         include
     LIBRARIES
         ${PROJECT_NAME}
+    DEPENDS
+        Boost
+        gazebo
 )
 
 include_directories(include)
