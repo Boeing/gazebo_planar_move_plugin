@@ -73,15 +73,19 @@ class TestPlugin(unittest.TestCase):
             GetLinkStateRequest(link_name=self.__test_link_name,
                                 reference_frame='world'))
 
-        rospy.loginfo('Link state retrieved as value: ''{}'' \nexpected ''{}'''.format(get_link_response.link_state.twist,
-                                                                                     test_twist))
+        rospy.loginfo('Link state retrieved as value: ''{}'' \nexpected ''{}'''
+                      .format(get_link_response.link_state.twist, test_twist))
         assert isinstance(get_link_response, GetLinkStateResponse)
         self.assertTrue(get_link_response.success)
 
-        self.assertAlmostEqual(get_link_response.link_state.twist.linear.x, test_twist.linear.x, delta=0.01)
-        self.assertAlmostEqual(get_link_response.link_state.twist.linear.y, test_twist.linear.y, delta=0.01)
-        self.assertAlmostEqual(get_link_response.link_state.twist.linear.z, test_twist.linear.z, delta=0.01)
-        self.assertAlmostEqual(get_link_response.link_state.twist.angular.z, test_twist.angular.z, delta=0.01)
+        self.assertAlmostEqual(
+            get_link_response.link_state.twist.linear.x, test_twist.linear.x, delta=0.01)
+        self.assertAlmostEqual(
+            get_link_response.link_state.twist.linear.y, test_twist.linear.y, delta=0.01)
+        self.assertAlmostEqual(
+            get_link_response.link_state.twist.linear.z, test_twist.linear.z, delta=0.01)
+        self.assertAlmostEqual(
+            get_link_response.link_state.twist.angular.z, test_twist.angular.z, delta=0.01)
 
         test_twist = self.make_twist(self, 0.0, 0.0, 0.0, 0.0)
         self.__cmd_vel_pub.publish(test_twist)

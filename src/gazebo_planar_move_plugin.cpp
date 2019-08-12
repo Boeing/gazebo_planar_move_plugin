@@ -37,7 +37,8 @@ void loadParam(sdf::ElementPtr sdf, TYPE& value, const TYPE& default_value, cons
 }
 }  // namespace
 
-PlanarMove::PlanarMove() : publish_odometry_(false), publish_tf_(false), x_(0), y_(0), rot_(0), gz_time_last_(0)
+PlanarMove::PlanarMove()
+    : publish_odometry_(false), publish_tf_(false), publish_imu_(false), x_(0), y_(0), rot_(0), gz_time_last_(0)
 
 {
 }
