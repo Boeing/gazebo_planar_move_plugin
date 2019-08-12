@@ -1,8 +1,6 @@
 # gazebo_planar_move_plugin
 
-## Installation
-
-Look at the included dockerfile.
+Move a model (robot) within gazebo by subscribing to /cmd_vel
 
 ## Include in your project
 
