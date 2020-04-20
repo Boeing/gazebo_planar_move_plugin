@@ -1,24 +1,44 @@
 #ifndef GAZEBO_PLANAR_MOVE_PLANAR_MOVE_H
 #define GAZEBO_PLANAR_MOVE_PLANAR_MOVE_H
 
+#include <nav_msgs/Odometry.h>
+#include <ros/callback_queue.h>
+#include <ros/ros.h>
+#include <tf2_ros/transform_broadcaster.h>
+
 #include <atomic>
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
 #include <mutex>
+#include <random>
 #include <sdf/sdf.hh>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include <nav_msgs/Odometry.h>
-
-#include <ros/callback_queue.h>
-#include <ros/ros.h>
-
-#include <tf2_ros/transform_broadcaster.h>
-
 namespace gazebo
 {
+
+struct State2D
+{
+    double x;
+    double y;
+    double w;
+};
+
+struct CmdVel
+{
+    double x;
+    double y;
+    double w;
+};
+
+struct OdomNoise
+{
+    std::normal_distribution<double> x;
+    std::normal_distribution<double> y;
+    std::normal_distribution<double> w;
+};
 
 class PlanarMove : public ModelPlugin
 {
@@ -52,20 +72,23 @@ class PlanarMove : public ModelPlugin
     std::string robot_base_frame_;
     std::string control_mode_;
 
+    std::default_random_engine generator_;
+    std::unique_ptr<OdomNoise> dist_;
+
     bool publish_odometry_;
     bool publish_tf_;
     bool publish_imu_;
 
     std::atomic<bool> new_cmd_;
-    double x_;
-    double y_;
-    double rot_;
+    CmdVel cmd_;
+
+    State2D tracked_state_;
 
     double gz_time_last_;
 
     std::vector<physics::LinkPtr> links_list_;
     physics::LinkPtr base_link_;
 };
-}
+}  // namespace gazebo
 
 #endif
