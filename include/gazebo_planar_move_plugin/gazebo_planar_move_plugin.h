@@ -77,6 +77,7 @@ class PlanarMove : public ModelPlugin
 
     bool publish_odometry_;
     bool publish_tf_;
+    bool ground_truth_;
     bool publish_imu_;
 
     std::atomic<bool> new_cmd_;

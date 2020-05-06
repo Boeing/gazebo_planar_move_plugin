@@ -35,7 +35,7 @@ void loadParam(sdf::ElementPtr sdf, TYPE& value, const TYPE& default_value, cons
 }  // namespace
 
 PlanarMove::PlanarMove()
-    : publish_odometry_(false), publish_tf_(false), publish_imu_(false),
+    : publish_odometry_(false), publish_tf_(false), ground_truth_(false), publish_imu_(false),
       new_cmd_(false), cmd_{0, 0, 0}, tracked_state_{0, 0, 0}, gz_time_last_(0)
 
 {
@@ -57,6 +57,7 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     loadParam(sdf, robot_base_frame_, std::string("base_link"), std::string("robot_frame"), robot_namespace_);
     loadParam(sdf, publish_odometry_, true, std::string("publish_odometry"), robot_namespace_);
     loadParam(sdf, publish_tf_, true, std::string("publish_tf"), robot_namespace_);
+    loadParam(sdf, ground_truth_, true, std::string("ground_truth"), robot_namespace_);
     loadParam(sdf, publish_imu_, false, std::string("publish_imu"), robot_namespace_);
     loadParam(sdf, control_mode_, std::string("position"), std::string("control_mode"), robot_namespace_);
 
@@ -66,32 +67,39 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     // Get the noise params from the urdf
     if (sdf->HasElement("noise"))
     {
-        auto noise_sdf = sdf->GetElement("noise");
-        if (noise_sdf->HasAttribute("type"))
+        if (ground_truth_)
+            ROS_WARN("Ignoring odom noise as ground_truth=true");
+        else
         {
-            const std::string type_string = noise_sdf->GetAttribute("type")->GetAsString();
-            if (type_string == "gaussian")
+            auto noise_sdf = sdf->GetElement("noise");
+            if (noise_sdf->HasAttribute("type"))
             {
-                const double mean_x = noise_sdf->Get<double>("mean_x", 0.0).first;
-                const double mean_y = noise_sdf->Get<double>("mean_y", 0.0).first;
-                const double mean_w = noise_sdf->Get<double>("mean_w", 0.0).first;
+                const std::string type_string = noise_sdf->GetAttribute("type")->GetAsString();
+                if (type_string == "gaussian")
+                {
+                    const double mean_x = noise_sdf->Get<double>("mean_x", 0.0).first;
+                    const double mean_y = noise_sdf->Get<double>("mean_y", 0.0).first;
+                    const double mean_w = noise_sdf->Get<double>("mean_w", 0.0).first;
 
-                const double stddev_x = noise_sdf->Get<double>("stddev_x", 0.05).first;
-                const double stddev_y = noise_sdf->Get<double>("stddev_y", 0.05).first;
-                const double stddev_w = noise_sdf->Get<double>("stddev_w", 0.05).first;
+                    const double stddev_x = noise_sdf->Get<double>("stddev_x", 0.05).first;
+                    const double stddev_y = noise_sdf->Get<double>("stddev_y", 0.05).first;
+                    const double stddev_w = noise_sdf->Get<double>("stddev_w", 0.05).first;
 
-                ROS_INFO_STREAM("Loading OdomNoise: mean=[" << mean_x << ", " << mean_y << ", " << mean_w << "] std=["
-                                                            << stddev_x << ", " << stddev_y << ", " << stddev_w << "]");
+                    ROS_INFO_STREAM("Loading OdomNoise: mean=[" << mean_x << ", " << mean_y << ", " << mean_w
+                                                                << "] std=[" << stddev_x << ", " << stddev_y << ", "
+                                                                << stddev_w << "]");
 
-                dist_.reset(new OdomNoise{std::normal_distribution<double>(mean_x, stddev_x),
-                                          std::normal_distribution<double>(mean_y, stddev_y),
-                                          std::normal_distribution<double>(mean_w, stddev_w)});
+                    dist_.reset(new OdomNoise{std::normal_distribution<double>(mean_x, stddev_x),
+                                              std::normal_distribution<double>(mean_y, stddev_y),
+                                              std::normal_distribution<double>(mean_w, stddev_w)});
+                }
+                else
+                    ROS_WARN_STREAM("Noise model defined with unknown type: " << type_string
+                                                                              << ". Ignoring noise model!");
             }
             else
-                ROS_WARN_STREAM("Noise model defined with unknown type: " << type_string << ". Ignoring noise model!");
+                ROS_WARN_STREAM("No type found in noise model. Ignoring noise model!");
         }
-        else
-            ROS_WARN_STREAM("No type found in noise model. Ignoring noise model!");
     }
 
     nh_ = ros::NodeHandle(robot_namespace_);
@@ -250,24 +258,37 @@ void PlanarMove::UpdateChild()
         const double dy = dt * cmd_.x * sin(current_yaw) + dt * cmd_.y * sin(M_PI / 2 - current_yaw);
         const double dw = dt * cmd_.w;
 
-        // update tracked position
-        tracked_state_.x += dx;
-        tracked_state_.y += dy;
-        tracked_state_.w += dw;
-
-        // add odom noise
-        if (dist_)
-        {
-            tracked_state_.x += dx * dist_->x(generator_);
-            tracked_state_.y += dy * dist_->y(generator_);
-            tracked_state_.w += dw * dist_->w(generator_);
-        }
+        const double new_x = current_pose.Pos().X() + dx;
+        const double new_y = current_pose.Pos().Y() + dy;
+        const double new_w = current_yaw + dw;
 
         // perfectly update the world position
         ignition::math::Pose3d new_pose;
-        new_pose.Pos().X() = current_pose.Pos().X() + dx;
-        new_pose.Pos().Y() = current_pose.Pos().Y() + dy;
-        new_pose.Rot().Euler(0.0, 0.0, current_yaw + dw);
+        new_pose.Pos().X() = new_x;
+        new_pose.Pos().Y() = new_y;
+        new_pose.Rot().Euler(0.0, 0.0, new_w);
+
+        // update tracked position
+        if (ground_truth_)
+        {
+            tracked_state_.x = new_x;
+            tracked_state_.y = new_y;
+            tracked_state_.w = new_w;
+        }
+        else
+        {
+            tracked_state_.x += dx;
+            tracked_state_.y += dy;
+            tracked_state_.w += dw;
+
+            // add odom sensor noise
+            if (dist_)
+            {
+                tracked_state_.x += dx * dist_->x(generator_);
+                tracked_state_.y += dy * dist_->y(generator_);
+                tracked_state_.w += dw * dist_->w(generator_);
+            }
+        }
 
         if (base_link_ == nullptr)
         {
