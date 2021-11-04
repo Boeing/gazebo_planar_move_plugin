@@ -77,6 +77,10 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
                 const std::string type_string = noise_sdf->GetAttribute("type")->GetAsString();
                 if (type_string == "gaussian")
                 {
+                    drift_x = noise_sdf->Get<double>("drift_x", 0.05).first;
+                    drift_y = noise_sdf->Get<double>("drift_y", 0.05).first;
+                    drift_w = noise_sdf->Get<double>("drift_w", 0.05).first;  // 2.5 deg per rad
+
                     const double mean_x = noise_sdf->Get<double>("mean_x", 0.0).first;
                     const double mean_y = noise_sdf->Get<double>("mean_y", 0.0).first;
                     const double mean_w = noise_sdf->Get<double>("mean_w", 0.0).first;
@@ -277,17 +281,21 @@ void PlanarMove::UpdateChild()
         }
         else
         {
-            tracked_state_.x += dx;
-            tracked_state_.y += dy;
-            tracked_state_.w += dw;
+            auto x_error = dx * drift_x;
+            auto y_error = dy * drift_y;
+            auto w_error = dw * drift_w;
 
             // add odom sensor noise
             if (dist_)
             {
-                tracked_state_.x += dx * dist_->x(generator_);
-                tracked_state_.y += dy * dist_->y(generator_);
-                tracked_state_.w += dw * dist_->w(generator_);
+                x_error *= dist_->x(generator_);
+                y_error *= dist_->y(generator_);
+                w_error *= dist_->w(generator_);
             }
+
+            tracked_state_.x += x_error + dx;
+            tracked_state_.y += y_error + dy;
+            tracked_state_.w += w_error + dw;
         }
 
         if (base_link_ == nullptr)
