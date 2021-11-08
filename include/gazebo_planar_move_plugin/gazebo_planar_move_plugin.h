@@ -87,6 +87,10 @@ class PlanarMove : public ModelPlugin
 
     double gz_time_last_;
 
+    double drift_x = 0.0;
+    double drift_y = 0.0;
+    double drift_w = 0.0;
+
     std::vector<physics::LinkPtr> links_list_;
     physics::LinkPtr base_link_;
 };
