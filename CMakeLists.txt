@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(gazebo_planar_move_plugin)
 
-add_definitions(-std=c++11)
+add_definitions(-std=c++14)
 
 find_package(
     catkin REQUIRED
@@ -33,7 +33,7 @@ catkin_package(
     ${PROJECT_NAME}
     DEPENDS
     Boost
-    gazebo
+    GAZEBO
 )
 
 include_directories(include)
