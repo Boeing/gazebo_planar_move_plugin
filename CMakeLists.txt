@@ -20,8 +20,8 @@ find_package(Boost REQUIRED)
 
 # link_directories(${gazebo_dev_LIBRARY_DIRS})
 
-add_library(${PROJECT_NAME} 
-    include/${PROJECT_NAME}/${PROJECT_NAME}.h 
+add_library(${PROJECT_NAME} SHARED 
+    # include/${PROJECT_NAME}/${PROJECT_NAME}.h 
     src/${PROJECT_NAME}.cpp
 )
 
@@ -33,6 +33,7 @@ ament_target_dependencies(${PROJECT_NAME}
   gazebo_dev
   tf2_geometry_msgs
   gazebo_ros
+  nav_msgs
   #"rclcpp"
 )
 ament_export_dependencies(gazebo_dev)
