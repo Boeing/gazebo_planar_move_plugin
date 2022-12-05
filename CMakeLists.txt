@@ -1,66 +1,63 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.8)
 project(gazebo_planar_move_plugin)
 
-add_definitions(-std=c++14)
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
-find_package(
-    catkin REQUIRED
-    COMPONENTS
-        gazebo_ros
-        geometry_msgs
-        nav_msgs
-        roscpp
-        sensor_msgs
-        tf2_geometry_msgs
-        tf2_ros
-)
-
-find_package(gazebo REQUIRED)
+# find dependencies
+find_package(ament_cmake REQUIRED)
+find_package(gazebo_dev REQUIRED)
+find_package(gazebo_ros REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+# find_package(roscpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+# find_package(tf2_ros REQUIRED)
+# find_package(gazebo REQUIRED)
 find_package(Boost REQUIRED)
 
-catkin_package(
-    CATKIN_DEPENDS
-    gazebo_ros
-    geometry_msgs
-    nav_msgs
-    roscpp
-    sensor_msgs
-    tf2_geometry_msgs
-    tf2_ros
-    INCLUDE_DIRS
-    include
-    LIBRARIES
-    ${PROJECT_NAME}
-    DEPENDS
-    Boost
-    GAZEBO
+# link_directories(${gazebo_dev_LIBRARY_DIRS})
+
+add_library(${PROJECT_NAME} 
+    include/${PROJECT_NAME}/${PROJECT_NAME}.h 
+    src/${PROJECT_NAME}.cpp
 )
 
-include_directories(include)
+target_include_directories(${PROJECT_NAME} PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
-include_directories(SYSTEM ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS})
-
-add_library(${PROJECT_NAME} include/${PROJECT_NAME}/${PROJECT_NAME}.h src/${PROJECT_NAME}.cpp)
-
-target_link_libraries(${PROJECT_NAME} ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES})
-
-install(
-    DIRECTORY include/${PROJECT_NAME}/
-    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-    FILES_MATCHING
-    PATTERN "*.h"
+ament_target_dependencies(${PROJECT_NAME}
+  gazebo_dev
+  tf2_geometry_msgs
+  gazebo_ros
+  #"rclcpp"
 )
+ament_export_dependencies(gazebo_dev)
 
-install(
-    TARGETS ${PROJECT_NAME}
-    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
 
-install(DIRECTORY test DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+# ament_export_libraries(${PROJECT_NAME})
+ament_export_targets(PlanarMove HAS_LIBRARY_TARGET)
+#ament_export_dependencies(rclcpp)
 
-if(CATKIN_ENABLE_TESTING)
-    find_package(rostest REQUIRED)
-    add_rostest(test/test_plugin.test)
-endif()
+# ament_export_dependencies(gazebo_ros)
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
+
+
+# ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/env-hooks/gazebo_plugins.sh.in")
+
+install(DIRECTORY include/
+        DESTINATION include)
+
+install(TARGETS ${PROJECT_NAME}
+  EXPORT PlanarMove
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+  )
+
+ament_package()

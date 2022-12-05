@@ -1,14 +1,16 @@
 #ifndef GAZEBO_PLANAR_MOVE_PLANAR_MOVE_H
 #define GAZEBO_PLANAR_MOVE_PLANAR_MOVE_H
 
-#include <nav_msgs/Odometry.h>
-#include <ros/callback_queue.h>
-#include <ros/ros.h>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+// #include <ros/callback_queue.h>
+#include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
 #include <atomic>
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
+#include <gazebo_ros/node.hpp>
 #include <mutex>
 #include <random>
 #include <sdf/sdf.hh>
@@ -19,29 +21,29 @@
 namespace gazebo
 {
 
-struct State2D
-{
+  struct State2D
+  {
     double x;
     double y;
     double w;
-};
+  };
 
-struct CmdVel
-{
+  struct CmdVel
+  {
     double x;
     double y;
     double w;
-};
+  };
 
-struct OdomNoise
-{
+  struct OdomNoise
+  {
     std::normal_distribution<double> x;
     std::normal_distribution<double> y;
     std::normal_distribution<double> w;
-};
+  };
 
-class PlanarMove : public ModelPlugin
-{
+  class PlanarMove : public ModelPlugin
+  {
   public:
     PlanarMove();
     ~PlanarMove();
@@ -51,17 +53,17 @@ class PlanarMove : public ModelPlugin
     virtual void UpdateChild();
 
   private:
-    void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
+    void cmdVelCallback(const geometry_msgs::msg::Twist &cmd_msg);
 
     physics::ModelPtr parent_;
     event::ConnectionPtr update_connection_;
 
-    ros::NodeHandle nh_;
-    ros::Publisher odometry_pub_;
-    ros::Publisher imu_pub_;
-    ros::Subscriber vel_sub_;
+    gazebo_ros::Node::SharedPtr ros_node_;
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometry_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr vel_sub_;
 
-    tf2_ros::TransformBroadcaster transform_broadcaster_;
+    std::shared_ptr<tf2_ros::TransformBroadcaster> transform_broadcaster_;
 
     std::mutex lock_;
 
@@ -93,7 +95,7 @@ class PlanarMove : public ModelPlugin
 
     std::vector<physics::LinkPtr> links_list_;
     physics::LinkPtr base_link_;
-};
-}  // namespace gazebo
+  };
+} // namespace gazebo
 
 #endif
