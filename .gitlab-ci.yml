@@ -1,4 +1,6 @@
+---
 include:
-  - project: robotics/continuous_integration
-    ref: galactic
-    file: /pipelines/.ros-galactic-pkg-ci.yml
+  - project: mtdi/pi9419/continuous-integration
+    file:
+      - ci-templates/auto-rules/with-rosinstall/galactic-default.yml
+      - ci-templates/lfs-pull.yml
