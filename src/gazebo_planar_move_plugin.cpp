@@ -262,6 +262,7 @@ namespace gazebo
         //
         if (control_mode_ == "position")
         {
+            RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Updating gazebo model position");
             const ignition::math::Pose3d current_pose = parent_->WorldPose();
             double current_yaw = current_pose.Rot().Yaw();
 
@@ -332,6 +333,7 @@ namespace gazebo
         {
             if (new_cmd_)
             {
+                RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Updating gazebo model velocity");
                 ignition::math::Pose3d pose = parent_->WorldPose();
                 const double yaw = pose.Rot().Yaw();
                 parent_->SetLinearVel(ignition::math::Vector3d(cmd_.x * cos(yaw) - cmd_.y * sin(yaw),
@@ -350,6 +352,7 @@ namespace gazebo
 
     void PlanarMove::cmdVelCallback(const geometry_msgs::msg::Twist &cmd_msg)
     {
+        RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Got new Twist message");
         // Note there is no mechanism to zero cmd_vel's. move_base or cmd_vel mux should send 0
         new_cmd_ = true;
         std::lock_guard<std::mutex> lock(lock_);
