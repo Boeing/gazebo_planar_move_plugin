@@ -4,13 +4,13 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 // #include <ros/callback_queue.h>
+#include <gazebo_ros/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
 #include <atomic>
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
-#include <gazebo_ros/node.hpp>
 #include <mutex>
 #include <random>
 #include <sdf/sdf.hh>
@@ -21,29 +21,29 @@
 namespace gazebo
 {
 
-  struct State2D
-  {
+struct State2D
+{
     double x;
     double y;
     double w;
-  };
+};
 
-  struct CmdVel
-  {
+struct CmdVel
+{
     double x;
     double y;
     double w;
-  };
+};
 
-  struct OdomNoise
-  {
+struct OdomNoise
+{
     std::normal_distribution<double> x;
     std::normal_distribution<double> y;
     std::normal_distribution<double> w;
-  };
+};
 
-  class PlanarMove : public ModelPlugin
-  {
+class PlanarMove : public ModelPlugin
+{
   public:
     PlanarMove();
     ~PlanarMove();
@@ -53,7 +53,7 @@ namespace gazebo
     virtual void UpdateChild();
 
   private:
-    void cmdVelCallback(const geometry_msgs::msg::Twist &cmd_msg);
+    void cmdVelCallback(const geometry_msgs::msg::Twist& cmd_msg);
 
     physics::ModelPtr parent_;
     event::ConnectionPtr update_connection_;
@@ -95,7 +95,7 @@ namespace gazebo
 
     std::vector<physics::LinkPtr> links_list_;
     physics::LinkPtr base_link_;
-  };
-} // namespace gazebo
+};
+}  // namespace gazebo
 
 #endif

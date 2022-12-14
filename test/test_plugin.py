@@ -106,7 +106,7 @@ class TestPlanarMovePlugin(unittest.TestCase):
         self.clock = rclpy.clock.Clock(clock_type=rclpy.clock.ClockType.ROS_TIME)
         self.log = self.node.get_logger()
 
-        # Client for checking entity status in gazebo 
+        # Client for checking entity status in gazebo
         self.entity_state_client = self.node.create_client(GetEntityState, '/gazebo/get_entity_state')
         while not self.entity_state_client.wait_for_service(timeout_sec=1.0):
             self.log.info('Entity state service not available, waiting again...')
