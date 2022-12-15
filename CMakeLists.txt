@@ -17,7 +17,9 @@ find_package(Boost REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED src/${PROJECT_NAME}.cpp)
 
-target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+target_include_directories(
+    ${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>
+)
 
 ament_target_dependencies(${PROJECT_NAME} gazebo_dev tf2_geometry_msgs gazebo_ros nav_msgs sensor_msgs)
 ament_export_dependencies(gazebo_dev)
@@ -35,7 +37,8 @@ install(
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
-    INCLUDES DESTINATION include
+    INCLUDES
+    DESTINATION include
 )
 
 #
