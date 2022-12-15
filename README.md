@@ -36,9 +36,8 @@ In order to simulate these robots, a Gazebo plugin is required to listen to this
 
 - The plugin simulates planar movements only. Any Z axis components of velocity shall be ignored.
   - The model position Z component shall always be set to 0.0.
-
 - Position uncertainty is not reflected in the _covariance_ components of the _Odom_ and _Imu_ topics published.
-    - All relevant xyz rx ry rz covariance components are set to 0.0001.
+  - All relevant xyz rx ry rz covariance components are set to 0.0001.
 
 ## Requirements Evaluation
 
