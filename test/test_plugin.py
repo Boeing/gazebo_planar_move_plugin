@@ -16,10 +16,8 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 import pytest
 from rclpy.parameter import Parameter
 
-from launch.substitutions import LaunchConfiguration
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 
 from gazebo_msgs.srv import GetEntityState
