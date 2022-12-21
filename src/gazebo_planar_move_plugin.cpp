@@ -139,7 +139,7 @@ void PlanarMove::UpdateChild()
     const double dt = gz_time_now - gz_time_last_;
     gz_time_last_ = gz_time_now;
 
-    const rclcpp::Time current_time = rclcpp::Time(gz_time_now);
+    const rclcpp::Time current_time = ros_node_->get_clock()->now();
 
     std::lock_guard<std::mutex> lock(lock_);
     const bool is_paused = parent_->GetWorld()->IsPaused();
