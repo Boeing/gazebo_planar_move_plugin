@@ -15,7 +15,8 @@ import rclpy.time
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 import pytest
 from rclpy.parameter import Parameter
-
+from rclpy.executors import MultiThreadedExecutor
+from threading import Thread
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
@@ -103,18 +104,32 @@ class TestPlanarMovePlugin(unittest.TestCase):
         rclpy.shutdown()
 
     def setUp(self):
+
+        def spin_srv(executor):
+            try:
+                executor.spin()
+            except rclpy.executors.ExternalShutdownException:
+                pass
+
         self.node = rclpy.create_node('test_node', parameter_overrides=[
             Parameter('use_sim_time', Parameter.Type.BOOL, True)])
+        srv_executor = MultiThreadedExecutor()
+        srv_executor.add_node(self.node)
+        srv_thread = Thread(target=spin_srv, args=(srv_executor,), daemon=True)
+        srv_thread.start()
+
         self.clock = rclpy.clock.Clock(
             clock_type=rclpy.clock.ClockType.ROS_TIME)
         self.log = self.node.get_logger()
 
         # Client for checking entity status in gazebo
-        self.entity_state_client = self.node.create_client(
-            GetEntityState, '/gazebo/get_entity_state')
-        while not self.entity_state_client.wait_for_service(timeout_sec=1.0):
-            self.log.info(
-                'Entity state service not available, waiting again...')
+        self.__logger.info("Creating subscriber for joint state...")
+        self.__joint_state = None
+        self.__joint_state_sub = self.__test_node.create_subscription(
+            JointState,
+            '/joint_states',
+            self.configs_callback,
+            qos_latch)
 
         # Twist publisher with latching QoS
         qos_profile = QoSProfile(

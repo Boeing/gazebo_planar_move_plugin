@@ -131,8 +131,8 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
 
 void PlanarMove::UpdateChild()
 {
-    // block any other physics pose updates
-    boost::recursive_mutex::scoped_lock plock(*parent_->GetWorld()->Physics()->GetPhysicsUpdateMutex());
+//    // block any other physics pose updates
+//    boost::recursive_mutex::scoped_lock plock(*parent_->GetWorld()->Physics()->GetPhysicsUpdateMutex());
 
     double gz_time_now = parent_->GetWorld()->SimTime().Double();
 
