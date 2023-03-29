@@ -4,7 +4,6 @@
     <version>1.0.0</version>
     <description>Planar move of objects in gazebo</description>
     <maintainer email="Jason.Cochrane@boeing.com">Boeing</maintainer>
-    <maintainer email="Phillip.Haeusler@boeing.com">Boeing</maintainer>
     <author>Boeing</author>
     <license>Boeing Proprietary</license>
 
@@ -13,7 +12,7 @@
     <depend>boost</depend>
     <depend>gazebo</depend>
     <depend>gazebo_ros</depend>
-    <depend>roscpp</depend>
+    <depend>rclcpp</depend>
     <depend>geometry_msgs</depend>
     <depend>sensor_msgs</depend>
     <depend>nav_msgs</depend>
