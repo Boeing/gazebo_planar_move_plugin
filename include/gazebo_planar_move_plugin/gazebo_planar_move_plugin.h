@@ -65,7 +65,6 @@ class PlanarMove : public ModelPlugin
 
     std::shared_ptr<tf2_ros::TransformBroadcaster> transform_broadcaster_;
 
-    std::mutex lock_;
 
     std::string robot_namespace_;
     std::string command_topic_;
@@ -83,6 +82,7 @@ class PlanarMove : public ModelPlugin
     bool publish_imu_;
 
     std::atomic<bool> new_cmd_;
+    mutable std::mutex cmd_lock;
     CmdVel cmd_;
 
     State2D tracked_state_;

@@ -133,7 +133,19 @@ void PlanarMove::UpdateChild()
 {
 //    // block any other physics pose updates
 //    boost::recursive_mutex::scoped_lock plock(*parent_->GetWorld()->Physics()->GetPhysicsUpdateMutex());
-
+//    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+//                                "UpdateChild()");
+    CmdVel last_cmd;
+    bool new_cmd_cp = false;
+    {
+//        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+//                                    "GZ WAITING LOCK 140");
+        std::unique_lock <std::mutex> lock(cmd_lock);
+        last_cmd = cmd_;
+        new_cmd_cp = new_cmd_;
+    }
+//    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+//                                "GZ WAITING LOCK RELEASE 140");
     double gz_time_now = parent_->GetWorld()->SimTime().Double();
 
     const double dt = gz_time_now - gz_time_last_;
@@ -141,7 +153,6 @@ void PlanarMove::UpdateChild()
 
     const rclcpp::Time current_time = ros_node_->get_clock()->now();
 
-    std::lock_guard<std::mutex> lock(lock_);
     const bool is_paused = parent_->GetWorld()->IsPaused();
     const bool is_physics_enabled = parent_->GetWorld()->PhysicsEnabled();
 
@@ -164,6 +175,8 @@ void PlanarMove::UpdateChild()
         tr.transform.rotation.z = tracked_qt.z();
         tr.transform.rotation.w = tracked_qt.w();
         transform_broadcaster_->sendTransform(tr);
+//        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+//                                    "sendTransform()");
     }
 
     if (publish_odometry_)
@@ -197,12 +210,12 @@ void PlanarMove::UpdateChild()
 
         if (control_mode_ == "position")
         {
-            odom.twist.twist.linear.x = cmd_.x;
-            odom.twist.twist.linear.y = cmd_.y;
+            odom.twist.twist.linear.x = last_cmd.x;
+            odom.twist.twist.linear.y = last_cmd.y;
             odom.twist.twist.linear.z = 0;
             odom.twist.twist.angular.x = 0;
             odom.twist.twist.angular.y = 0;
-            odom.twist.twist.angular.z = cmd_.w;
+            odom.twist.twist.angular.z = last_cmd.w;
         }
         else
         {
@@ -221,6 +234,8 @@ void PlanarMove::UpdateChild()
         odom.child_frame_id = robot_base_frame_;
 
         odometry_pub_->publish(odom);
+//        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+//                                    "publish odom()");
     }
 
     if (publish_imu_)
@@ -241,7 +256,7 @@ void PlanarMove::UpdateChild()
 
         imu.angular_velocity.x = 0;
         imu.angular_velocity.y = 0;
-        imu.angular_velocity.z = cmd_.w;
+        imu.angular_velocity.z = last_cmd.w;
 
         imu.angular_velocity_covariance[0] = 0.0001;
         imu.angular_velocity_covariance[4] = 0.0001;
@@ -268,9 +283,9 @@ void PlanarMove::UpdateChild()
         double current_yaw = current_pose.Rot().Yaw();
 
         // determine shift in position with perfect velocity tracking
-        const double dx = dt * cmd_.x * cos(current_yaw) - dt * cmd_.y * cos(M_PI / 2 - current_yaw);
-        const double dy = dt * cmd_.x * sin(current_yaw) + dt * cmd_.y * sin(M_PI / 2 - current_yaw);
-        const double dw = dt * cmd_.w;
+        const double dx = dt * last_cmd.x * cos(current_yaw) - dt * last_cmd.y * cos(M_PI / 2 - current_yaw);
+        const double dy = dt * last_cmd.x * sin(current_yaw) + dt * last_cmd.y * sin(M_PI / 2 - current_yaw);
+        const double dw = dt * last_cmd.w;
 
         const double new_x = current_pose.Pos().X() + dx;
         const double new_y = current_pose.Pos().Y() + dy;
@@ -332,22 +347,27 @@ void PlanarMove::UpdateChild()
     //
     else if (control_mode_ == "velocity")
     {
-        if (new_cmd_)
+        if (new_cmd_cp)
         {
             RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Updating gazebo model velocity");
             ignition::math::Pose3d pose = parent_->WorldPose();
             const double yaw = pose.Rot().Yaw();
-            parent_->SetLinearVel(ignition::math::Vector3d(cmd_.x * cos(yaw) - cmd_.y * sin(yaw),
-                                                           cmd_.y * cos(yaw) + cmd_.x * sin(yaw), 0));
-            parent_->SetAngularVel(ignition::math::Vector3d(0, 0, cmd_.w));
-            new_cmd_ = false;
+            parent_->SetLinearVel(ignition::math::Vector3d(last_cmd.x * cos(yaw) - last_cmd.y * sin(yaw),
+                                                           last_cmd.y * cos(yaw) + last_cmd.x * sin(yaw), 0));
+            parent_->SetAngularVel(ignition::math::Vector3d(0, 0, last_cmd.w));
+            new_cmd_cp = false;
+            {
+                std::unique_lock <std::mutex> lock(cmd_lock);
+                new_cmd_ = false;
+            }
         }
     }
     else
     {
         RCLCPP_FATAL_STREAM(rclcpp::get_logger("rclcpp"), "Chosen controlMode is invalid");
     }
-
+//    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+//                                "SetPaused()");
     parent_->GetWorld()->SetPaused(is_paused);
 }
 
@@ -355,9 +375,12 @@ void PlanarMove::cmdVelCallback(const geometry_msgs::msg::Twist& cmd_msg)
 {
     RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Got new Twist message");
     // Note there is no mechanism to zero cmd_vel's. move_base or cmd_vel mux should send 0
-    new_cmd_ = true;
-    std::lock_guard<std::mutex> lock(lock_);
-    cmd_ = {cmd_msg.linear.x, cmd_msg.linear.y, cmd_msg.angular.z};
+
+    {
+        std::unique_lock <std::mutex> lock(cmd_lock);
+        new_cmd_ = true;
+        cmd_ = {cmd_msg.linear.x, cmd_msg.linear.y, cmd_msg.angular.z};
+    }
 }
 
 GZ_REGISTER_MODEL_PLUGIN(PlanarMove)
