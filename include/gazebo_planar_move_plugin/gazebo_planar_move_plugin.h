@@ -65,7 +65,6 @@ class PlanarMove : public ModelPlugin
 
     std::shared_ptr<tf2_ros::TransformBroadcaster> transform_broadcaster_;
 
-
     std::string robot_namespace_;
     std::string command_topic_;
     std::string odometry_topic_;

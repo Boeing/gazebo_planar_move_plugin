@@ -131,21 +131,21 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
 
 void PlanarMove::UpdateChild()
 {
-//    // block any other physics pose updates
-//    boost::recursive_mutex::scoped_lock plock(*parent_->GetWorld()->Physics()->GetPhysicsUpdateMutex());
-//    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
-//                                "UpdateChild()");
+    //    // block any other physics pose updates
+    //    boost::recursive_mutex::scoped_lock plock(*parent_->GetWorld()->Physics()->GetPhysicsUpdateMutex());
+    //    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+    //                                "UpdateChild()");
     CmdVel last_cmd;
     bool new_cmd_cp = false;
     {
-//        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
-//                                    "GZ WAITING LOCK 140");
-        std::unique_lock <std::mutex> lock(cmd_lock);
+        //        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+        //                                    "GZ WAITING LOCK 140");
+        std::unique_lock<std::mutex> lock(cmd_lock);
         last_cmd = cmd_;
         new_cmd_cp = new_cmd_;
     }
-//    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
-//                                "GZ WAITING LOCK RELEASE 140");
+    //    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+    //                                "GZ WAITING LOCK RELEASE 140");
     double gz_time_now = parent_->GetWorld()->SimTime().Double();
 
     const double dt = gz_time_now - gz_time_last_;
@@ -175,8 +175,8 @@ void PlanarMove::UpdateChild()
         tr.transform.rotation.z = tracked_qt.z();
         tr.transform.rotation.w = tracked_qt.w();
         transform_broadcaster_->sendTransform(tr);
-//        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
-//                                    "sendTransform()");
+        //        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+        //                                    "sendTransform()");
     }
 
     if (publish_odometry_)
@@ -234,8 +234,8 @@ void PlanarMove::UpdateChild()
         odom.child_frame_id = robot_base_frame_;
 
         odometry_pub_->publish(odom);
-//        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
-//                                    "publish odom()");
+        //        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+        //                                    "publish odom()");
     }
 
     if (publish_imu_)
@@ -357,7 +357,7 @@ void PlanarMove::UpdateChild()
             parent_->SetAngularVel(ignition::math::Vector3d(0, 0, last_cmd.w));
             new_cmd_cp = false;
             {
-                std::unique_lock <std::mutex> lock(cmd_lock);
+                std::unique_lock<std::mutex> lock(cmd_lock);
                 new_cmd_ = false;
             }
         }
@@ -366,8 +366,8 @@ void PlanarMove::UpdateChild()
     {
         RCLCPP_FATAL_STREAM(rclcpp::get_logger("rclcpp"), "Chosen controlMode is invalid");
     }
-//    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
-//                                "SetPaused()");
+    //    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+    //                                "SetPaused()");
     parent_->GetWorld()->SetPaused(is_paused);
 }
 
@@ -377,7 +377,7 @@ void PlanarMove::cmdVelCallback(const geometry_msgs::msg::Twist& cmd_msg)
     // Note there is no mechanism to zero cmd_vel's. move_base or cmd_vel mux should send 0
 
     {
-        std::unique_lock <std::mutex> lock(cmd_lock);
+        std::unique_lock<std::mutex> lock(cmd_lock);
         new_cmd_ = true;
         cmd_ = {cmd_msg.linear.x, cmd_msg.linear.y, cmd_msg.angular.z};
     }
