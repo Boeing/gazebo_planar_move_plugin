@@ -19,6 +19,9 @@
     <depend>tf2_ros</depend>
     <depend>tf2_geometry_msgs</depend>
 
+    <test_depend>launch_testing_ament_cmake</test_depend>
+    <test_depend>ros2launch</test_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
     <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}" />
