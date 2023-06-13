@@ -21,6 +21,7 @@ from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
+from sensor_msgs.msg import JointState
 from gazebo_msgs.srv import GetEntityState
 from geometry_msgs.msg import Twist
 
@@ -129,7 +130,7 @@ class TestPlanarMovePlugin(unittest.TestCase):
             JointState,
             '/joint_states',
             self.configs_callback,
-            qos_latch)
+            10)
 
         # Twist publisher with latching QoS
         qos_profile = QoSProfile(
