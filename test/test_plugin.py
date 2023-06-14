@@ -25,6 +25,8 @@ from sensor_msgs.msg import JointState
 from gazebo_msgs.srv import GetEntityState
 from geometry_msgs.msg import Twist
 
+# from gazebo_model_attachment_plugin.gazebo_client import GazeboModelAttachmentClient
+
 from time import sleep
 
 
@@ -124,13 +126,13 @@ class TestPlanarMovePlugin(unittest.TestCase):
         self.log = self.node.get_logger()
 
         # Client for checking entity status in gazebo
-        self.__logger.info("Creating subscriber for joint state...")
-        self.__joint_state = None
-        self.__joint_state_sub = self.__test_node.create_subscription(
-            JointState,
-            '/joint_states',
-            self.configs_callback,
-            10)
+        # self.log.info("Creating subscriber for joint state...")
+        # self.__joint_state = None
+        # self.__joint_state_sub = self.node.create_subscription(
+        #     JointState,
+        #     '/joint_states',
+        #     self.configs_callback,
+        #     10)
 
         # Twist publisher with latching QoS
         qos_profile = QoSProfile(
