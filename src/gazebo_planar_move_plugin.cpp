@@ -151,7 +151,8 @@ void PlanarMove::UpdateChild()
     const double dt = gz_time_now - gz_time_last_;
     gz_time_last_ = gz_time_now;
 
-    const rclcpp::Time current_time = ros_node_->get_clock()->now();
+//    const rclcpp::Time current_time = ros_node_->get_clock()->now();
+    const rclcpp::Time current_time = rclcpp::Time((int) (parent_->GetWorld()->SimTime().Double() * 1000000000LL));
 
     const bool is_paused = parent_->GetWorld()->IsPaused();
     const bool is_physics_enabled = parent_->GetWorld()->PhysicsEnabled();
