@@ -118,7 +118,7 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
         command_topic_, qos.get_subscription_qos(command_topic_, rclcpp::QoS(1)),
         std::bind(&PlanarMove::cmdVelCallback, this, std::placeholders::_1));
     odometry_pub_ = ros_node_->create_publisher<nav_msgs::msg::Odometry>(
-        odometry_topic_, qos.get_publisher_qos(odometry_topic_, rclcpp::QoS(1)));
+        odometry_topic_, rclcpp::QoS(rclcpp::KeepLast(1)).reliable());
     imu_pub_ = ros_node_->create_publisher<sensor_msgs::msg::Imu>("imu", qos.get_publisher_qos("imu", rclcpp::QoS(1)));
 
     // listen to the update event (broadcast every simulation iteration)
@@ -151,8 +151,8 @@ void PlanarMove::UpdateChild()
     const double dt = gz_time_now - gz_time_last_;
     gz_time_last_ = gz_time_now;
 
-//    const rclcpp::Time current_time = ros_node_->get_clock()->now();
-    const rclcpp::Time current_time = rclcpp::Time((int) (parent_->GetWorld()->SimTime().Double() * 1000000000LL));
+    const rclcpp::Time current_time = ros_node_->get_clock()->now();
+//    const rclcpp::Time current_time = rclcpp::Time((int) (parent_->GetWorld()->SimTime().Double() * 1000000000LL));
 
     const bool is_paused = parent_->GetWorld()->IsPaused();
     const bool is_physics_enabled = parent_->GetWorld()->PhysicsEnabled();
