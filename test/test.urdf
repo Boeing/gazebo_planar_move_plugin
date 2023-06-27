@@ -8,9 +8,12 @@
             <odometry_frame>odom</odometry_frame>
             <odometry_topic>odom</odometry_topic>
             <command_topic>cmd_vel</command_topic>
-            <control_mode>velocity</control_mode>
-            <publish_odometry>1</publish_odometry>
-            <publish_tf>1</publish_tf>
+            <control_mode>position</control_mode>
+            <publish_odometry>true</publish_odometry>
+            <publish_tf>true</publish_tf>
+            <publish_imu>false</publish_imu>
+            <ground_truth>true</ground_truth>
+
         </plugin>
     </gazebo>
 

@@ -1,6 +1,6 @@
 <sdf version='1.6'>
     <world name='default'>
-
+        <plugin name="gazebo_no_physics_world_plugin" filename="libgazebo_no_physics_world_plugin.so"></plugin>
         <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so">
             <ros>
                 <namespace>/gazebo</namespace>

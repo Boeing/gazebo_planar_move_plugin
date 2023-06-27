@@ -157,7 +157,7 @@ void PlanarMove::UpdateChild()
     const bool is_paused = parent_->GetWorld()->IsPaused();
     const bool is_physics_enabled = parent_->GetWorld()->PhysicsEnabled();
 
-    parent_->GetWorld()->SetPaused(true);
+
 
     tf2::Quaternion tracked_qt;
     tracked_qt.setRPY(0, 0, tracked_state_.w);
@@ -330,16 +330,17 @@ void PlanarMove::UpdateChild()
         }
         else
         {
+            parent_->GetWorld()->SetPaused(true);
             parent_->SetLinkWorldPose(new_pose, base_link_);
-
+            parent_->GetWorld()->SetPaused(is_paused);
             // Hack disables physics, required after call to any physics related function call
-            if (!is_physics_enabled)
-            {
-                for (physics::LinkPtr link : links_list_)
-                {
-                    link->SetEnabled(false);
-                }
-            }
+//            if (!is_physics_enabled)
+//            {
+//                for (physics::LinkPtr link : links_list_)
+//                {
+//                    link->SetEnabled(false);
+//                }
+//            }
         }
     }
 
@@ -369,7 +370,7 @@ void PlanarMove::UpdateChild()
     }
     //    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
     //                                "SetPaused()");
-    parent_->GetWorld()->SetPaused(is_paused);
+
 }
 
 void PlanarMove::cmdVelCallback(const geometry_msgs::msg::Twist& cmd_msg)
