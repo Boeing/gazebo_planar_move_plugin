@@ -265,8 +265,8 @@ void PlanarMove::UpdateChild()
 
     // Update Loop
     const double dt_since_last_update = gz_time_now - last_update_time_;
-    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 100,
-                                    "Sim time is: " << gz_time_now << "Last update dt is:" << dt_since_last_update << " wait for: " << 1.0/update_rate_);
+    //RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 100,
+    //                                "Sim time is: " << gz_time_now << "Last update dt is:" << dt_since_last_update << " wait for: " << 1.0/update_rate_);
     if (dt_since_last_update >= (1.0/update_rate_))
     {
         // Position control mode
