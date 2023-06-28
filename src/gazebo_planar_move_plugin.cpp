@@ -1,12 +1,13 @@
 #include <boost/bind.hpp>
 #include <gazebo_planar_move_plugin/gazebo_planar_move_plugin.h>
+#include <gazebo_ros/conversions/builtin_interfaces.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <gazebo_ros/conversions/builtin_interfaces.hpp>
+
 #include <cmath>
 #include <string>
 
@@ -117,8 +118,8 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     vel_sub_ = ros_node_->create_subscription<geometry_msgs::msg::Twist>(
         command_topic_, qos.get_subscription_qos(command_topic_, rclcpp::QoS(1)),
         std::bind(&PlanarMove::cmdVelCallback, this, std::placeholders::_1));
-    odometry_pub_ = ros_node_->create_publisher<nav_msgs::msg::Odometry>(
-        odometry_topic_, qos.get_publisher_qos("odom", rclcpp::QoS(1)));
+    odometry_pub_ = ros_node_->create_publisher<nav_msgs::msg::Odometry>(odometry_topic_,
+                                                                         qos.get_publisher_qos("odom", rclcpp::QoS(1)));
     imu_pub_ = ros_node_->create_publisher<sensor_msgs::msg::Imu>("imu", qos.get_publisher_qos("imu", rclcpp::QoS(1)));
 
     // listen to the update event (broadcast every simulation iteration)
@@ -153,9 +154,11 @@ void PlanarMove::UpdateChild()
     tracked_qt.setRPY(0, 0, tracked_state_.w);
 
     const double dt_since_last_publish = gz_time_now - last_publish_time_;
-    if (dt_since_last_publish >= (1.0 / publish_rate_)) {
+    if (dt_since_last_publish >= (1.0 / publish_rate_))
+    {
         const rclcpp::Time current_time = gazebo_ros::Convert<builtin_interfaces::msg::Time>(gz_time_now);
-        if (publish_tf_) {
+        if (publish_tf_)
+        {
             geometry_msgs::msg::TransformStamped tr;
             tr.header.stamp = current_time;
             tr.header.frame_id = odometry_frame_;
@@ -172,7 +175,8 @@ void PlanarMove::UpdateChild()
             //                                    "sendTransform()");
         }
 
-        if (publish_odometry_) {
+        if (publish_odometry_)
+        {
             nav_msgs::msg::Odometry odom;
 
             // Set pose covariance
@@ -200,14 +204,17 @@ void PlanarMove::UpdateChild()
             odom.pose.pose.orientation.z = tracked_qt.z();
             odom.pose.pose.orientation.w = tracked_qt.w();
 
-            if (control_mode_ == "position") {
+            if (control_mode_ == "position")
+            {
                 odom.twist.twist.linear.x = last_cmd.x;
                 odom.twist.twist.linear.y = last_cmd.y;
                 odom.twist.twist.linear.z = 0;
                 odom.twist.twist.angular.x = 0;
                 odom.twist.twist.angular.y = 0;
                 odom.twist.twist.angular.z = last_cmd.w;
-            } else {
+            }
+            else
+            {
                 ignition::math::Vector3d linear_velocity = model_->RelativeLinearVel();
                 odom.twist.twist.linear.x = linear_velocity.X();
                 odom.twist.twist.linear.y = linear_velocity.Y();
@@ -227,7 +234,8 @@ void PlanarMove::UpdateChild()
             //                                    "publish odom()");
         }
 
-        if (publish_imu_) {
+        if (publish_imu_)
+        {
             sensor_msgs::msg::Imu imu;
 
             imu.header.stamp = current_time;
@@ -265,19 +273,23 @@ void PlanarMove::UpdateChild()
 
     // Update Loop
     const double dt_since_last_update = gz_time_now - last_update_time_;
-    //RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 100,
-    //                                "Sim time is: " << gz_time_now << "Last update dt is:" << dt_since_last_update << " wait for: " << 1.0/update_rate_);
-    if (dt_since_last_update >= (1.0/update_rate_))
+    // RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 100,
+    //                                "Sim time is: " << gz_time_now << "Last update dt is:" << dt_since_last_update <<
+    //                                " wait for: " << 1.0/update_rate_);
+    if (dt_since_last_update >= (1.0 / update_rate_))
     {
         // Position control mode
-        if (control_mode_ == "position") {
+        if (control_mode_ == "position")
+        {
             RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Updating gazebo model position");
             const ignition::math::Pose3d current_pose = model_->WorldPose();
             double current_yaw = current_pose.Rot().Yaw();
 
             // determine shift in position with perfect velocity tracking
-            const double dx = dt_since_last_update * last_cmd.x * cos(current_yaw) - dt_since_last_update * last_cmd.y * cos(M_PI / 2 - current_yaw);
-            const double dy = dt_since_last_update * last_cmd.x * sin(current_yaw) + dt_since_last_update * last_cmd.y * sin(M_PI / 2 - current_yaw);
+            const double dx = dt_since_last_update * last_cmd.x * cos(current_yaw) -
+                              dt_since_last_update * last_cmd.y * cos(M_PI / 2 - current_yaw);
+            const double dy = dt_since_last_update * last_cmd.x * sin(current_yaw) +
+                              dt_since_last_update * last_cmd.y * sin(M_PI / 2 - current_yaw);
             const double dw = dt_since_last_update * last_cmd.w;
 
             const double new_x = current_pose.Pos().X() + dx;
@@ -291,17 +303,21 @@ void PlanarMove::UpdateChild()
             new_pose.Rot().Euler(0.0, 0.0, new_w);
 
             // update tracked position
-            if (ground_truth_) {
+            if (ground_truth_)
+            {
                 tracked_state_.x = new_x;
                 tracked_state_.y = new_y;
                 tracked_state_.w = new_w;
-            } else {
+            }
+            else
+            {
                 auto x_error = dx * drift_x;
                 auto y_error = dy * drift_y;
                 auto w_error = dw * drift_w;
 
                 // add odom sensor noise
-                if (dist_) {
+                if (dist_)
+                {
                     x_error *= dist_->x(generator_);
                     y_error *= dist_->y(generator_);
                     w_error *= dist_->w(generator_);
@@ -312,31 +328,36 @@ void PlanarMove::UpdateChild()
                 tracked_state_.w += w_error + dw;
             }
 
-            if (base_link_ == nullptr) {
+            if (base_link_ == nullptr)
+            {
                 RCLCPP_FATAL_STREAM(rclcpp::get_logger("rclcpp"), "Model has no link named 'base link'");
-            } else {
+            }
+            else
+            {
                 const bool is_paused = model_->GetWorld()->IsPaused();
                 model_->GetWorld()->SetPaused(true);
                 model_->SetLinkWorldPose(new_pose, base_link_);
                 model_->GetWorld()->SetPaused(is_paused);
                 // Hack disables physics, required after call to any physics related function call
-//            if (!is_physics_enabled)
-//            {
-//                for (physics::LinkPtr link : links_list_)
-//                {
-//                    link->SetEnabled(false);
-//                }
-//            }
+                //            if (!is_physics_enabled)
+                //            {
+                //                for (physics::LinkPtr link : links_list_)
+                //                {
+                //                    link->SetEnabled(false);
+                //                }
+                //            }
             }
         }
         // Velocity control mode
-        else if (control_mode_ == "velocity") {
-            if (new_cmd_cp) {
+        else if (control_mode_ == "velocity")
+        {
+            if (new_cmd_cp)
+            {
                 RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Updating gazebo model velocity");
                 ignition::math::Pose3d pose = model_->WorldPose();
                 const double yaw = pose.Rot().Yaw();
                 model_->SetLinearVel(ignition::math::Vector3d(last_cmd.x * cos(yaw) - last_cmd.y * sin(yaw),
-                                                               last_cmd.y * cos(yaw) + last_cmd.x * sin(yaw), 0));
+                                                              last_cmd.y * cos(yaw) + last_cmd.x * sin(yaw), 0));
                 model_->SetAngularVel(ignition::math::Vector3d(0, 0, last_cmd.w));
                 new_cmd_cp = false;
                 {
@@ -344,12 +365,13 @@ void PlanarMove::UpdateChild()
                     new_cmd_ = false;
                 }
             }
-        } else {
+        }
+        else
+        {
             RCLCPP_FATAL_STREAM(rclcpp::get_logger("rclcpp"), "Chosen controlMode is invalid");
         }
         last_update_time_ = gz_time_now;
     }
-
 }
 
 void PlanarMove::cmdVelCallback(const geometry_msgs::msg::Twist& cmd_msg)

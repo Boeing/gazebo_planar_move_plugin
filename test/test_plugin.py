@@ -1,6 +1,5 @@
 import os
 import unittest
-import math
 import launch
 import launch.actions
 
@@ -242,6 +241,3 @@ class TestPlanarMovePlugin(unittest.TestCase):
         # v_y = 1.0
         # v_z = 0.0
         # v_rz = 0.5
-
-
-
