@@ -2,7 +2,7 @@
 <robot name="test_robot">
 
     <gazebo>
-        <plugin name="set_planar_move_plugin" filename="libgazebo_planar_move_plugin.so">
+        <plugin name="planar_move_plugin" filename="libgazebo_planar_move_plugin.so">
             <robot_namespace>/</robot_namespace>
             <robot_frame>base_link</robot_frame>
             <odometry_frame>odom</odometry_frame>
@@ -13,7 +13,8 @@
             <publish_tf>true</publish_tf>
             <publish_imu>false</publish_imu>
             <ground_truth>true</ground_truth>
-
+            <update_rate>50</update_rate>
+            <publish_rate>30</publish_rate>
         </plugin>
     </gazebo>
 

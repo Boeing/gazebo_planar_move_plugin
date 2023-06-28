@@ -2,13 +2,11 @@
 #include <gazebo_planar_move_plugin/gazebo_planar_move_plugin.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-// #include <ros/advertise_options.h>
 #include <sensor_msgs/msg/imu.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
-// #include <tf2_geometry_msgs/msg/tf2_geometry_msgs.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
+#include <gazebo_ros/conversions/builtin_interfaces.hpp>
 #include <cmath>
 #include <string>
 
@@ -38,7 +36,7 @@ void loadParam(sdf::ElementPtr sdf, TYPE& value, const TYPE& default_value, cons
 
 PlanarMove::PlanarMove()
     : publish_odometry_(false), publish_tf_(false), ground_truth_(false), publish_imu_(false),
-      new_cmd_(false), cmd_{0, 0, 0}, tracked_state_{0, 0, 0}, gz_time_last_(0)
+      new_cmd_(false), cmd_{0, 0, 0}, tracked_state_{0, 0, 0}, publish_rate_(30.0), update_rate_(50.0)
 
 {
 }
@@ -50,7 +48,7 @@ PlanarMove::~PlanarMove()
 // cppcheck-suppress unusedFunction
 void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
 {
-    parent_ = parent;
+    model_ = parent;
 
     loadParam(sdf, robot_namespace_, std::string("/"), std::string("robot_namespace"), robot_namespace_);
     loadParam(sdf, command_topic_, std::string("cmd_vel"), std::string("command_topic"), robot_namespace_);
@@ -62,6 +60,8 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     loadParam(sdf, ground_truth_, true, std::string("ground_truth"), robot_namespace_);
     loadParam(sdf, publish_imu_, false, std::string("publish_imu"), robot_namespace_);
     loadParam(sdf, control_mode_, std::string("position"), std::string("control_mode"), robot_namespace_);
+    loadParam(sdf, update_rate_, 60.0, std::string("update_rate"), robot_namespace_);
+    loadParam(sdf, publish_rate_, 30.0, std::string("publish_rate"), robot_namespace_);
 
     cmd_ = {0, 0, 0};
     tracked_state_ = {0, 0, 0};
@@ -118,21 +118,22 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
         command_topic_, qos.get_subscription_qos(command_topic_, rclcpp::QoS(1)),
         std::bind(&PlanarMove::cmdVelCallback, this, std::placeholders::_1));
     odometry_pub_ = ros_node_->create_publisher<nav_msgs::msg::Odometry>(
-        odometry_topic_, rclcpp::QoS(rclcpp::KeepLast(1)).reliable());
+        odometry_topic_, qos.get_publisher_qos("odom", rclcpp::QoS(1)));
     imu_pub_ = ros_node_->create_publisher<sensor_msgs::msg::Imu>("imu", qos.get_publisher_qos("imu", rclcpp::QoS(1)));
 
     // listen to the update event (broadcast every simulation iteration)
-    gz_time_last_ = 0.0;
+    last_update_time_ = model_->GetWorld()->SimTime().Double();
+    last_publish_time_ = model_->GetWorld()->SimTime().Double();
     update_connection_ = event::Events::ConnectBeforePhysicsUpdate(std::bind(&PlanarMove::UpdateChild, this));
 
-    links_list_ = parent_->GetLinks();
-    base_link_ = parent_->GetLink(robot_base_frame_);
+    links_list_ = model_->GetLinks();
+    base_link_ = model_->GetLink(robot_base_frame_);
 }
 
 void PlanarMove::UpdateChild()
 {
     //    // block any other physics pose updates
-    //    boost::recursive_mutex::scoped_lock plock(*parent_->GetWorld()->Physics()->GetPhysicsUpdateMutex());
+    //    boost::recursive_mutex::scoped_lock plock(*model_->GetWorld()->Physics()->GetPhysicsUpdateMutex());
     //    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
     //                                "UpdateChild()");
     CmdVel last_cmd;
@@ -146,194 +147,179 @@ void PlanarMove::UpdateChild()
     }
     //    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
     //                                "GZ WAITING LOCK RELEASE 140");
-    double gz_time_now = parent_->GetWorld()->SimTime().Double();
-
-    const double dt = gz_time_now - gz_time_last_;
-    gz_time_last_ = gz_time_now;
-
-    const rclcpp::Time current_time = ros_node_->get_clock()->now();
-//    const rclcpp::Time current_time = rclcpp::Time((int) (parent_->GetWorld()->SimTime().Double() * 1000000000LL));
-
-    const bool is_paused = parent_->GetWorld()->IsPaused();
-    const bool is_physics_enabled = parent_->GetWorld()->PhysicsEnabled();
-
-
+    double gz_time_now = model_->GetWorld()->SimTime().Double();
 
     tf2::Quaternion tracked_qt;
     tracked_qt.setRPY(0, 0, tracked_state_.w);
 
-    if (publish_tf_)
-    {
-        geometry_msgs::msg::TransformStamped tr;
-        tr.header.stamp = current_time;
-        tr.header.frame_id = odometry_frame_;
-        tr.child_frame_id = robot_base_frame_;
-        tr.transform.translation.x = tracked_state_.x;
-        tr.transform.translation.y = tracked_state_.y;
-        tr.transform.translation.z = 0.0;
-        tr.transform.rotation.x = tracked_qt.x();
-        tr.transform.rotation.y = tracked_qt.y();
-        tr.transform.rotation.z = tracked_qt.z();
-        tr.transform.rotation.w = tracked_qt.w();
-        transform_broadcaster_->sendTransform(tr);
-        //        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
-        //                                    "sendTransform()");
-    }
-
-    if (publish_odometry_)
-    {
-        nav_msgs::msg::Odometry odom;
-
-        // Set pose covariance
-        odom.pose.covariance[0] = 0.0001;
-        odom.pose.covariance[7] = 0.0001;
-        odom.pose.covariance[14] = 0.0001;
-        odom.pose.covariance[21] = 0.0001;
-        odom.pose.covariance[28] = 0.0001;
-        odom.pose.covariance[35] = 0.0001;
-
-        // Set twist covariance
-        odom.twist.covariance[0] = 0.0001;
-        odom.twist.covariance[7] = 0.0001;
-        odom.twist.covariance[14] = 0.0001;
-        odom.twist.covariance[21] = 0.0001;
-        odom.twist.covariance[28] = 0.0001;
-        odom.twist.covariance[35] = 0.0001;
-
-        // publish odom topic
-        odom.pose.pose.position.x = tracked_state_.x;
-        odom.pose.pose.position.y = tracked_state_.y;
-        odom.pose.pose.position.z = 0.0;
-        odom.pose.pose.orientation.x = tracked_qt.x();
-        odom.pose.pose.orientation.y = tracked_qt.y();
-        odom.pose.pose.orientation.z = tracked_qt.z();
-        odom.pose.pose.orientation.w = tracked_qt.w();
-
-        if (control_mode_ == "position")
-        {
-            odom.twist.twist.linear.x = last_cmd.x;
-            odom.twist.twist.linear.y = last_cmd.y;
-            odom.twist.twist.linear.z = 0;
-            odom.twist.twist.angular.x = 0;
-            odom.twist.twist.angular.y = 0;
-            odom.twist.twist.angular.z = last_cmd.w;
-        }
-        else
-        {
-            ignition::math::Vector3d linear_velocity = parent_->RelativeLinearVel();
-            odom.twist.twist.linear.x = linear_velocity.X();
-            odom.twist.twist.linear.y = linear_velocity.Y();
-            odom.twist.twist.linear.z = linear_velocity.Z();
-            ignition::math::Vector3d rot_velocity = parent_->RelativeAngularVel();
-            odom.twist.twist.angular.x = rot_velocity.X();
-            odom.twist.twist.angular.y = rot_velocity.Y();
-            odom.twist.twist.angular.z = rot_velocity.Z();
+    const double dt_since_last_publish = gz_time_now - last_publish_time_;
+    if (dt_since_last_publish >= (1.0 / publish_rate_)) {
+        const rclcpp::Time current_time = gazebo_ros::Convert<builtin_interfaces::msg::Time>(gz_time_now);
+        if (publish_tf_) {
+            geometry_msgs::msg::TransformStamped tr;
+            tr.header.stamp = current_time;
+            tr.header.frame_id = odometry_frame_;
+            tr.child_frame_id = robot_base_frame_;
+            tr.transform.translation.x = tracked_state_.x;
+            tr.transform.translation.y = tracked_state_.y;
+            tr.transform.translation.z = 0.0;
+            tr.transform.rotation.x = tracked_qt.x();
+            tr.transform.rotation.y = tracked_qt.y();
+            tr.transform.rotation.z = tracked_qt.z();
+            tr.transform.rotation.w = tracked_qt.w();
+            transform_broadcaster_->sendTransform(tr);
+            //        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+            //                                    "sendTransform()");
         }
 
-        odom.header.stamp = current_time;
-        odom.header.frame_id = odometry_frame_;
-        odom.child_frame_id = robot_base_frame_;
+        if (publish_odometry_) {
+            nav_msgs::msg::Odometry odom;
 
-        odometry_pub_->publish(odom);
-        //        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
-        //                                    "publish odom()");
-    }
+            // Set pose covariance
+            odom.pose.covariance[0] = 0.0001;
+            odom.pose.covariance[7] = 0.0001;
+            odom.pose.covariance[14] = 0.0001;
+            odom.pose.covariance[21] = 0.0001;
+            odom.pose.covariance[28] = 0.0001;
+            odom.pose.covariance[35] = 0.0001;
 
-    if (publish_imu_)
-    {
-        sensor_msgs::msg::Imu imu;
+            // Set twist covariance
+            odom.twist.covariance[0] = 0.0001;
+            odom.twist.covariance[7] = 0.0001;
+            odom.twist.covariance[14] = 0.0001;
+            odom.twist.covariance[21] = 0.0001;
+            odom.twist.covariance[28] = 0.0001;
+            odom.twist.covariance[35] = 0.0001;
 
-        imu.header.stamp = current_time;
-        imu.header.frame_id = robot_base_frame_;
+            // publish odom topic
+            odom.pose.pose.position.x = tracked_state_.x;
+            odom.pose.pose.position.y = tracked_state_.y;
+            odom.pose.pose.position.z = 0.0;
+            odom.pose.pose.orientation.x = tracked_qt.x();
+            odom.pose.pose.orientation.y = tracked_qt.y();
+            odom.pose.pose.orientation.z = tracked_qt.z();
+            odom.pose.pose.orientation.w = tracked_qt.w();
 
-        imu.orientation.x = tracked_qt.x();
-        imu.orientation.y = tracked_qt.y();
-        imu.orientation.z = tracked_qt.z();
-        imu.orientation.w = tracked_qt.w();
-
-        imu.orientation_covariance[0] = 0.0001;
-        imu.orientation_covariance[4] = 0.0001;
-        imu.orientation_covariance[8] = 0.0001;
-
-        imu.angular_velocity.x = 0;
-        imu.angular_velocity.y = 0;
-        imu.angular_velocity.z = last_cmd.w;
-
-        imu.angular_velocity_covariance[0] = 0.0001;
-        imu.angular_velocity_covariance[4] = 0.0001;
-        imu.angular_velocity_covariance[8] = 0.0001;
-
-        imu.linear_acceleration.x = 0.00;
-        imu.linear_acceleration.y = 0.00;
-        imu.linear_acceleration.z = 9.81;
-
-        imu.linear_acceleration_covariance[0] = 0.0001;
-        imu.linear_acceleration_covariance[4] = 0.0001;
-        imu.linear_acceleration_covariance[8] = 0.0001;
-
-        imu_pub_->publish(imu);
-    }
-
-    //
-    // Position control mode
-    //
-    if (control_mode_ == "position")
-    {
-        RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Updating gazebo model position");
-        const ignition::math::Pose3d current_pose = parent_->WorldPose();
-        double current_yaw = current_pose.Rot().Yaw();
-
-        // determine shift in position with perfect velocity tracking
-        const double dx = dt * last_cmd.x * cos(current_yaw) - dt * last_cmd.y * cos(M_PI / 2 - current_yaw);
-        const double dy = dt * last_cmd.x * sin(current_yaw) + dt * last_cmd.y * sin(M_PI / 2 - current_yaw);
-        const double dw = dt * last_cmd.w;
-
-        const double new_x = current_pose.Pos().X() + dx;
-        const double new_y = current_pose.Pos().Y() + dy;
-        const double new_w = current_yaw + dw;
-
-        // perfectly update the world position
-        ignition::math::Pose3d new_pose;
-        new_pose.Pos().X() = new_x;
-        new_pose.Pos().Y() = new_y;
-        new_pose.Rot().Euler(0.0, 0.0, new_w);
-
-        // update tracked position
-        if (ground_truth_)
-        {
-            tracked_state_.x = new_x;
-            tracked_state_.y = new_y;
-            tracked_state_.w = new_w;
-        }
-        else
-        {
-            auto x_error = dx * drift_x;
-            auto y_error = dy * drift_y;
-            auto w_error = dw * drift_w;
-
-            // add odom sensor noise
-            if (dist_)
-            {
-                x_error *= dist_->x(generator_);
-                y_error *= dist_->y(generator_);
-                w_error *= dist_->w(generator_);
+            if (control_mode_ == "position") {
+                odom.twist.twist.linear.x = last_cmd.x;
+                odom.twist.twist.linear.y = last_cmd.y;
+                odom.twist.twist.linear.z = 0;
+                odom.twist.twist.angular.x = 0;
+                odom.twist.twist.angular.y = 0;
+                odom.twist.twist.angular.z = last_cmd.w;
+            } else {
+                ignition::math::Vector3d linear_velocity = model_->RelativeLinearVel();
+                odom.twist.twist.linear.x = linear_velocity.X();
+                odom.twist.twist.linear.y = linear_velocity.Y();
+                odom.twist.twist.linear.z = linear_velocity.Z();
+                ignition::math::Vector3d rot_velocity = model_->RelativeAngularVel();
+                odom.twist.twist.angular.x = rot_velocity.X();
+                odom.twist.twist.angular.y = rot_velocity.Y();
+                odom.twist.twist.angular.z = rot_velocity.Z();
             }
 
-            tracked_state_.x += x_error + dx;
-            tracked_state_.y += y_error + dy;
-            tracked_state_.w += w_error + dw;
+            odom.header.stamp = current_time;
+            odom.header.frame_id = odometry_frame_;
+            odom.child_frame_id = robot_base_frame_;
+
+            odometry_pub_->publish(odom);
+            //        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
+            //                                    "publish odom()");
         }
 
-        if (base_link_ == nullptr)
-        {
-            RCLCPP_FATAL_STREAM(rclcpp::get_logger("rclcpp"), "Model has no link named 'base link'");
+        if (publish_imu_) {
+            sensor_msgs::msg::Imu imu;
+
+            imu.header.stamp = current_time;
+            imu.header.frame_id = robot_base_frame_;
+
+            imu.orientation.x = tracked_qt.x();
+            imu.orientation.y = tracked_qt.y();
+            imu.orientation.z = tracked_qt.z();
+            imu.orientation.w = tracked_qt.w();
+
+            imu.orientation_covariance[0] = 0.0001;
+            imu.orientation_covariance[4] = 0.0001;
+            imu.orientation_covariance[8] = 0.0001;
+
+            imu.angular_velocity.x = 0;
+            imu.angular_velocity.y = 0;
+            imu.angular_velocity.z = last_cmd.w;
+
+            imu.angular_velocity_covariance[0] = 0.0001;
+            imu.angular_velocity_covariance[4] = 0.0001;
+            imu.angular_velocity_covariance[8] = 0.0001;
+
+            imu.linear_acceleration.x = 0.00;
+            imu.linear_acceleration.y = 0.00;
+            imu.linear_acceleration.z = 9.81;
+
+            imu.linear_acceleration_covariance[0] = 0.0001;
+            imu.linear_acceleration_covariance[4] = 0.0001;
+            imu.linear_acceleration_covariance[8] = 0.0001;
+
+            imu_pub_->publish(imu);
         }
-        else
-        {
-            parent_->GetWorld()->SetPaused(true);
-            parent_->SetLinkWorldPose(new_pose, base_link_);
-            parent_->GetWorld()->SetPaused(is_paused);
-            // Hack disables physics, required after call to any physics related function call
+        last_publish_time_ = gz_time_now;
+    }
+
+    // Update Loop
+    const double dt_since_last_update = gz_time_now - last_update_time_;
+    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 100,
+                                    "Sim time is: " << gz_time_now << "Last update dt is:" << dt_since_last_update << " wait for: " << 1.0/update_rate_);
+    if (dt_since_last_update >= (1.0/update_rate_))
+    {
+        // Position control mode
+        if (control_mode_ == "position") {
+            RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Updating gazebo model position");
+            const ignition::math::Pose3d current_pose = model_->WorldPose();
+            double current_yaw = current_pose.Rot().Yaw();
+
+            // determine shift in position with perfect velocity tracking
+            const double dx = dt_since_last_update * last_cmd.x * cos(current_yaw) - dt_since_last_update * last_cmd.y * cos(M_PI / 2 - current_yaw);
+            const double dy = dt_since_last_update * last_cmd.x * sin(current_yaw) + dt_since_last_update * last_cmd.y * sin(M_PI / 2 - current_yaw);
+            const double dw = dt_since_last_update * last_cmd.w;
+
+            const double new_x = current_pose.Pos().X() + dx;
+            const double new_y = current_pose.Pos().Y() + dy;
+            const double new_w = current_yaw + dw;
+
+            // perfectly update the world position
+            ignition::math::Pose3d new_pose;
+            new_pose.Pos().X() = new_x;
+            new_pose.Pos().Y() = new_y;
+            new_pose.Rot().Euler(0.0, 0.0, new_w);
+
+            // update tracked position
+            if (ground_truth_) {
+                tracked_state_.x = new_x;
+                tracked_state_.y = new_y;
+                tracked_state_.w = new_w;
+            } else {
+                auto x_error = dx * drift_x;
+                auto y_error = dy * drift_y;
+                auto w_error = dw * drift_w;
+
+                // add odom sensor noise
+                if (dist_) {
+                    x_error *= dist_->x(generator_);
+                    y_error *= dist_->y(generator_);
+                    w_error *= dist_->w(generator_);
+                }
+
+                tracked_state_.x += x_error + dx;
+                tracked_state_.y += y_error + dy;
+                tracked_state_.w += w_error + dw;
+            }
+
+            if (base_link_ == nullptr) {
+                RCLCPP_FATAL_STREAM(rclcpp::get_logger("rclcpp"), "Model has no link named 'base link'");
+            } else {
+                const bool is_paused = model_->GetWorld()->IsPaused();
+                model_->GetWorld()->SetPaused(true);
+                model_->SetLinkWorldPose(new_pose, base_link_);
+                model_->GetWorld()->SetPaused(is_paused);
+                // Hack disables physics, required after call to any physics related function call
 //            if (!is_physics_enabled)
 //            {
 //                for (physics::LinkPtr link : links_list_)
@@ -341,35 +327,28 @@ void PlanarMove::UpdateChild()
 //                    link->SetEnabled(false);
 //                }
 //            }
-        }
-    }
-
-    //
-    // Velocity control mode
-    //
-    else if (control_mode_ == "velocity")
-    {
-        if (new_cmd_cp)
-        {
-            RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Updating gazebo model velocity");
-            ignition::math::Pose3d pose = parent_->WorldPose();
-            const double yaw = pose.Rot().Yaw();
-            parent_->SetLinearVel(ignition::math::Vector3d(last_cmd.x * cos(yaw) - last_cmd.y * sin(yaw),
-                                                           last_cmd.y * cos(yaw) + last_cmd.x * sin(yaw), 0));
-            parent_->SetAngularVel(ignition::math::Vector3d(0, 0, last_cmd.w));
-            new_cmd_cp = false;
-            {
-                std::unique_lock<std::mutex> lock(cmd_lock);
-                new_cmd_ = false;
             }
         }
+        // Velocity control mode
+        else if (control_mode_ == "velocity") {
+            if (new_cmd_cp) {
+                RCLCPP_DEBUG_STREAM(ros_node_->get_logger(), "Updating gazebo model velocity");
+                ignition::math::Pose3d pose = model_->WorldPose();
+                const double yaw = pose.Rot().Yaw();
+                model_->SetLinearVel(ignition::math::Vector3d(last_cmd.x * cos(yaw) - last_cmd.y * sin(yaw),
+                                                               last_cmd.y * cos(yaw) + last_cmd.x * sin(yaw), 0));
+                model_->SetAngularVel(ignition::math::Vector3d(0, 0, last_cmd.w));
+                new_cmd_cp = false;
+                {
+                    std::unique_lock<std::mutex> lock(cmd_lock);
+                    new_cmd_ = false;
+                }
+            }
+        } else {
+            RCLCPP_FATAL_STREAM(rclcpp::get_logger("rclcpp"), "Chosen controlMode is invalid");
+        }
+        last_update_time_ = gz_time_now;
     }
-    else
-    {
-        RCLCPP_FATAL_STREAM(rclcpp::get_logger("rclcpp"), "Chosen controlMode is invalid");
-    }
-    //    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
-    //                                "SetPaused()");
 
 }
 

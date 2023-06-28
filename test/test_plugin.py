@@ -198,6 +198,8 @@ class TestPlanarMovePlugin(unittest.TestCase):
 
     def test_set(self):
         # Test linear moves
+        import pdb
+        pdb.set_trace()
         self.set_and_test_velocity(v_x=1.0,
                                    v_y=0.0,
                                    v_z=0.0,
