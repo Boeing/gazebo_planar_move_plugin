@@ -55,7 +55,7 @@ class PlanarMove : public ModelPlugin
   private:
     void cmdVelCallback(const geometry_msgs::msg::Twist& cmd_msg);
 
-    physics::ModelPtr parent_;
+    physics::ModelPtr model_;
     event::ConnectionPtr update_connection_;
 
     gazebo_ros::Node::SharedPtr ros_node_;
@@ -85,8 +85,11 @@ class PlanarMove : public ModelPlugin
     CmdVel cmd_;
 
     State2D tracked_state_;
+    double publish_rate_;
+    double update_rate_;
 
-    double gz_time_last_;
+    double last_update_time_;
+    double last_publish_time_;
 
     double drift_x = 0.0;
     double drift_y = 0.0;

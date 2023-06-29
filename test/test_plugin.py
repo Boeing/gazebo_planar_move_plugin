@@ -1,6 +1,5 @@
 import os
 import unittest
-
 import launch
 import launch.actions
 
@@ -142,6 +141,11 @@ class TestPlanarMovePlugin(unittest.TestCase):
         self.robot_name = 'test_robot'
         self.world_frame = 'world'
 
+        self.entity_state_client = self.node.create_client(
+            srv_name='/gazebo/get_entity_state',
+            srv_type=GetEntityState
+        )
+
         sleep(5)  # Give time to Gazebo client/server to bring up
 
     def tearDown(self):
@@ -193,6 +197,8 @@ class TestPlanarMovePlugin(unittest.TestCase):
 
     def test_set(self):
         # Test linear moves
+        import pdb
+        pdb.set_trace()
         self.set_and_test_velocity(v_x=1.0,
                                    v_y=0.0,
                                    v_z=0.0,
@@ -225,7 +231,13 @@ class TestPlanarMovePlugin(unittest.TestCase):
                                    v_rz=-0.5)
 
         # Test combo
-        self.set_and_test_velocity(v_x=1.0,
-                                   v_y=1.0,
-                                   v_z=0.0,
-                                   v_rz=0.5)
+        # This test is not valid - sin and cosine compnenets of YAW are applied to X and Y:
+        # const double dx = dt * cmd_vel.linear.x * cos(yaw) - dt * cmd_vel.linear.y * cos(M_PI / 2 - yaw);
+        # const double dy = dt * cmd_vel.linear.x * sin(yaw) + dt * cmd_vel.linear.y * sin(M_PI / 2 - yaw);
+        # const double dw = dt * cmd_vel.angular.z;
+        #
+        # v_x = 1.0
+        #
+        # v_y = 1.0
+        # v_z = 0.0
+        # v_rz = 0.5
