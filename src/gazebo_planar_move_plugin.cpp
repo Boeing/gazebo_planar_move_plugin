@@ -37,8 +37,8 @@ void loadParam(sdf::ElementPtr sdf, TYPE& value, const TYPE& default_value, cons
 
 PlanarMove::PlanarMove()
     : publish_odometry_(false), publish_tf_(false), ground_truth_(false), publish_imu_(false),
-      new_cmd_(false), cmd_{0, 0, 0}, tracked_state_{0, 0, 0}, publish_rate_(30.0), update_rate_(50.0)
-
+      new_cmd_(false), cmd_{0, 0, 0}, tracked_state_{0, 0, 0}, publish_rate_(30.0), update_rate_(50.0),
+      last_update_time_(0.0), last_publish_time_(0.0)
 {
 }
 
@@ -138,7 +138,7 @@ void PlanarMove::UpdateChild()
     //    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
     //                                "UpdateChild()");
     CmdVel last_cmd;
-    bool new_cmd_cp = false;
+    bool new_cmd_cp;
     {
         //        RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
         //                                    "GZ WAITING LOCK 140");
@@ -350,7 +350,7 @@ void PlanarMove::UpdateChild()
                 model_->SetLinearVel(ignition::math::Vector3d(last_cmd.x * cos(yaw) - last_cmd.y * sin(yaw),
                                                               last_cmd.y * cos(yaw) + last_cmd.x * sin(yaw), 0));
                 model_->SetAngularVel(ignition::math::Vector3d(0, 0, last_cmd.w));
-                new_cmd_cp = false;
+                //                new_cmd_cp = false;
                 {
                     std::unique_lock<std::mutex> lock(cmd_lock);
                     new_cmd_ = false;
