@@ -71,8 +71,6 @@ class PlanarMove : public ModelPlugin
     std::string odometry_frame_;
     std::string robot_base_frame_;
     std::string control_mode_;
-    double publish_rate_;
-    double update_rate_;
 
     std::default_random_engine generator_;
     std::unique_ptr<OdomNoise> dist_;
@@ -87,6 +85,8 @@ class PlanarMove : public ModelPlugin
     CmdVel cmd_;
 
     State2D tracked_state_;
+    double publish_rate_;
+    double update_rate_;
 
     double last_update_time_;
     double last_publish_time_;

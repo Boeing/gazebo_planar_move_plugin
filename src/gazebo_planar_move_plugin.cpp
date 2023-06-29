@@ -6,7 +6,7 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <cmath>
 #include <string>
@@ -150,7 +150,6 @@ void PlanarMove::UpdateChild()
     //                                "GZ WAITING LOCK RELEASE 140");
     double gz_time_now = model_->GetWorld()->SimTime().Double();
     const bool is_paused = model_->GetWorld()->IsPaused();
-    const bool is_physics_enabled = model_->GetWorld()->PhysicsEnabled();
     tf2::Quaternion tracked_qt;
     tracked_qt.setRPY(0, 0, tracked_state_.w);
 
