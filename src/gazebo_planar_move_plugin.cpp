@@ -149,7 +149,8 @@ void PlanarMove::UpdateChild()
     //    RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 250,
     //                                "GZ WAITING LOCK RELEASE 140");
     double gz_time_now = model_->GetWorld()->SimTime().Double();
-
+//    const bool is_paused = model_->GetWorld()->IsPaused();
+    const bool is_physics_enabled = model_->GetWorld()->PhysicsEnabled();
     tf2::Quaternion tracked_qt;
     tracked_qt.setRPY(0, 0, tracked_state_.w);
 
@@ -334,18 +335,17 @@ void PlanarMove::UpdateChild()
             }
             else
             {
-                const bool is_paused = model_->GetWorld()->IsPaused();
                 model_->GetWorld()->SetPaused(true);
                 model_->SetLinkWorldPose(new_pose, base_link_);
-                model_->GetWorld()->SetPaused(is_paused);
+                model_->GetWorld()->SetPaused(false);
                 // Hack disables physics, required after call to any physics related function call
-                //            if (!is_physics_enabled)
-                //            {
-                //                for (physics::LinkPtr link : links_list_)
-                //                {
-                //                    link->SetEnabled(false);
-                //                }
-                //            }
+                if (!is_physics_enabled)
+                {
+                    for (physics::LinkPtr link : links_list_)
+                    {
+                        link->SetEnabled(false);
+                    }
+                }
             }
         }
         // Velocity control mode
