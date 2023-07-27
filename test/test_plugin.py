@@ -20,8 +20,8 @@ from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
-from gazebo_msgs.srv import GetEntityState
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 
 # from gazebo_model_attachment_plugin.gazebo_client import GazeboModelAttachmentClient
 
@@ -104,14 +104,17 @@ class TestPlanarMovePlugin(unittest.TestCase):
     def tearDownClass(cls):
         rclpy.shutdown()
 
-    def setUp(self):
+    def odom_callback(self, msg):
+        self.odom_twist = msg.twist.twist
 
+    def setUp(self):
         def spin_srv(executor):
             try:
                 executor.spin()
             except rclpy.executors.ExternalShutdownException:
                 pass
 
+        self.odom_twist = self.make_twist(self, 0.0, 0.0, 0.0, 0.0)
         self.node = rclpy.create_node('test_node', parameter_overrides=[
             Parameter('use_sim_time', Parameter.Type.BOOL, True)])
         srv_executor = MultiThreadedExecutor()
@@ -141,10 +144,11 @@ class TestPlanarMovePlugin(unittest.TestCase):
         self.robot_name = 'test_robot'
         self.world_frame = 'world'
 
-        self.entity_state_client = self.node.create_client(
-            srv_name='/gazebo/get_entity_state',
-            srv_type=GetEntityState
-        )
+        self.odom_subscriber = self.node.create_subscription(
+            Odometry,
+            '/odom',
+            self.odom_callback,
+            qos_profile=QoSProfile(depth=100, durability=DurabilityPolicy.VOLATILE, history=HistoryPolicy.KEEP_LAST))
 
         sleep(5)  # Give time to Gazebo client/server to bring up
 
@@ -156,30 +160,19 @@ class TestPlanarMovePlugin(unittest.TestCase):
         test_twist = self.make_twist(self, v_x, v_y, v_z, v_rz)
         self.twist_publisher.publish(test_twist)
 
-        sleep(10)  # Small sleep to wait for the set to take effect
-
-        # Get entity velocity
-        self.entity_state_req = GetEntityState.Request()
-        self.entity_state_req.name = self.robot_name
-        self.entity_state_req.reference_frame = self.world_frame
-        self.entity_state_future = self.entity_state_client.call_async(
-            self.entity_state_req)
-        rclpy.spin_until_future_complete(self.node, self.entity_state_future)
-        self.entity_state_res = self.entity_state_future.result()
+        sleep(5)  # Small sleep to wait for the set to take effect
 
         self.node.get_logger().info('Entity state retrieved as value: ''{}'' \nexpected ''{}'''
-                                    .format(self.entity_state_res.state.twist, test_twist))
-        assert isinstance(self.entity_state_res, GetEntityState.Response)
-        self.assertTrue(self.entity_state_res.success)
+                                    .format(self.odom_twist, test_twist))
 
         self.assertAlmostEqual(
-            self.entity_state_res.state.twist.linear.x, test_twist.linear.x, delta=0.01)
+            self.odom_twist.linear.x, test_twist.linear.x, delta=0.01)
         self.assertAlmostEqual(
-            self.entity_state_res.state.twist.linear.y, test_twist.linear.y, delta=0.01)
+            self.odom_twist.linear.y, test_twist.linear.y, delta=0.01)
         self.assertAlmostEqual(
-            self.entity_state_res.state.twist.linear.z, test_twist.linear.z, delta=0.01)
+            self.odom_twist.linear.z, test_twist.linear.z, delta=0.01)
         self.assertAlmostEqual(
-            self.entity_state_res.state.twist.angular.z, test_twist.angular.z, delta=0.01)
+            self.odom_twist.angular.z, test_twist.angular.z, delta=0.01)
 
         test_twist = self.make_twist(self, 0.0, 0.0, 0.0, 0.0)
         self.twist_publisher.publish(test_twist)
@@ -197,8 +190,6 @@ class TestPlanarMovePlugin(unittest.TestCase):
 
     def test_set(self):
         # Test linear moves
-        import pdb
-        pdb.set_trace()
         self.set_and_test_velocity(v_x=1.0,
                                    v_y=0.0,
                                    v_z=0.0,
