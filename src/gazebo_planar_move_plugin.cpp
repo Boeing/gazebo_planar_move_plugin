@@ -62,8 +62,9 @@ void PlanarMove::Load(physics::ModelPtr parent, sdf::ElementPtr sdf)
     loadParam(sdf, publish_imu_, false, std::string("publish_imu"), robot_namespace_);
     loadParam(sdf, control_mode_, std::string("position"), std::string("control_mode"), robot_namespace_);
     loadParam(sdf, update_rate_, 60.0, std::string("update_rate"), robot_namespace_);
+    update_period_ = 1.0 / update_rate_;
     loadParam(sdf, publish_rate_, 30.0, std::string("publish_rate"), robot_namespace_);
-
+    publish_period_ = 1.0 / publish_rate_;
     cmd_ = {0, 0, 0};
     tracked_state_ = {0, 0, 0};
 
@@ -154,11 +155,10 @@ void PlanarMove::UpdateChild()
     tracked_qt.setRPY(0, 0, tracked_state_.w);
 
     const double dt_since_last_publish = gz_time_now - last_publish_time_;
-    if (dt_since_last_publish >= (1.0 / publish_rate_))
+    if (dt_since_last_publish >= publish_period_)
     {
         const rclcpp::Time current_time = gazebo_ros::Convert<builtin_interfaces::msg::Time>(gz_time_now);
-        if (publish_tf_)
-        {
+        if (publish_tf_) {
             geometry_msgs::msg::TransformStamped tr;
             tr.header.stamp = current_time;
             tr.header.frame_id = odometry_frame_;
@@ -175,8 +175,7 @@ void PlanarMove::UpdateChild()
             //                                    "sendTransform()");
         }
 
-        if (publish_odometry_)
-        {
+        if (publish_odometry_) {
             nav_msgs::msg::Odometry odom;
 
             // Set pose covariance
@@ -204,17 +203,14 @@ void PlanarMove::UpdateChild()
             odom.pose.pose.orientation.z = tracked_qt.z();
             odom.pose.pose.orientation.w = tracked_qt.w();
 
-            if (control_mode_ == "position")
-            {
+            if (control_mode_ == "position") {
                 odom.twist.twist.linear.x = last_cmd.x;
                 odom.twist.twist.linear.y = last_cmd.y;
                 odom.twist.twist.linear.z = 0;
                 odom.twist.twist.angular.x = 0;
                 odom.twist.twist.angular.y = 0;
                 odom.twist.twist.angular.z = last_cmd.w;
-            }
-            else
-            {
+            } else {
                 ignition::math::Vector3d linear_velocity = model_->RelativeLinearVel();
                 odom.twist.twist.linear.x = linear_velocity.X();
                 odom.twist.twist.linear.y = linear_velocity.Y();
@@ -234,8 +230,7 @@ void PlanarMove::UpdateChild()
             //                                    "publish odom()");
         }
 
-        if (publish_imu_)
-        {
+        if (publish_imu_) {
             sensor_msgs::msg::Imu imu;
 
             imu.header.stamp = current_time;
@@ -262,21 +257,14 @@ void PlanarMove::UpdateChild()
             imu.linear_acceleration.y = 0.00;
             imu.linear_acceleration.z = 9.81;
 
-            imu.linear_acceleration_covariance[0] = 0.0001;
-            imu.linear_acceleration_covariance[4] = 0.0001;
-            imu.linear_acceleration_covariance[8] = 0.0001;
-
-            imu_pub_->publish(imu);
         }
-        last_publish_time_ = gz_time_now;
     }
-
     // Update Loop
     const double dt_since_last_update = gz_time_now - last_update_time_;
     // RCLCPP_WARN_STREAM_THROTTLE(ros_node_->get_logger(), *ros_node_->get_clock(), 100,
     //                                "Sim time is: " << gz_time_now << "Last update dt is:" << dt_since_last_update <<
     //                                " wait for: " << 1.0/update_rate_);
-    if (dt_since_last_update >= (1.0 / update_rate_))
+    if (dt_since_last_update >= update_period_)
     {
         // Position control mode
         if (control_mode_ == "position")

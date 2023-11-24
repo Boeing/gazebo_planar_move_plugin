@@ -161,7 +161,6 @@ class TestPlanarMovePlugin(unittest.TestCase):
         self.twist_publisher.publish(test_twist)
 
         sleep(5)  # Small sleep to wait for the set to take effect
-
         self.node.get_logger().info('Entity state retrieved as value: ''{}'' \nexpected ''{}'''
                                     .format(self.odom_twist, test_twist))
 

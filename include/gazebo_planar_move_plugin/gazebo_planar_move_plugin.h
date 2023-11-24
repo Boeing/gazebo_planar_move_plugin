@@ -86,7 +86,9 @@ class PlanarMove : public ModelPlugin
 
     State2D tracked_state_;
     double publish_rate_;
+    double publish_period_;
     double update_rate_;
+    double update_period_;
 
     double last_update_time_;
     double last_publish_time_;
