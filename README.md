@@ -46,7 +46,7 @@ This package is released under the Apache 2.0 License
 # Contributing
 
 Any contribution that you make to this repository will
-be under the Modified Apache 2 License, as dictated by that
+be under the Apache-2.0 License, as dictated by that
 [license](http://www.apache.org/licenses/LICENSE-2.0)
 
 To contribute, issue a PR and @brta-jc (jason.cochrane@boeing.com)
