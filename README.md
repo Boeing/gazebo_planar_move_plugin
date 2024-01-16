@@ -1,3 +1,7 @@
+| Distro | CI Status                                                                                                                                                                                       |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Humble | [![CI](https://github.com/Boeing/gazebo_planar_move_plugin/actions/workflows/main.yml/badge.svg?branch=humble)](https://github.com/Boeing/gazebo_planar_move_plugin/actions/workflows/main.yml) |
+
 # Gazebo Planar Movement Plugin
 
 [![pipeline status](https://git.web.boeing.com/robotics/ros/gazebo_planar_move_plugin/badges/master/pipeline.svg)](https://git.web.boeing.com/robotics/ros/gazebo_planar_move_plugin/commits/master)
@@ -24,9 +28,9 @@ In order to simulate these robots, a Gazebo plugin is required to listen to this
 
 ## Definitions
 
-| Definition | Description                                                                                                              |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Model       | An instanced SDF in Gazebo. _Models_ consist of _Links_ connected by _Joints_.                                                                                                               |
+| Definition | Description                                                                    |
+| ---------- | ------------------------------------------------------------------------------ |
+| Model      | An instanced SDF in Gazebo. _Models_ consist of _Links_ connected by _Joints_. |
 
 ## Design
 
