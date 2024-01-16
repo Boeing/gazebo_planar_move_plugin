@@ -1,27 +1,27 @@
 <?xml version="1.0"?>
 <package format="3">
-    <name>gazebo_planar_move_plugin</name>
-    <version>1.0.0</version>
-    <description>Planar move of objects in gazebo</description>
-    <maintainer email="Jason.Cochrane@boeing.com">Boeing</maintainer>
-    <author>Boeing</author>
-    <license>Boeing Proprietary</license>
+  <name>gazebo_planar_move_plugin</name>
+  <version>1.0.0</version>
+  <description>Planar move of objects in gazebo</description>
+  <maintainer email="Jason.Cochrane@boeing.com">Boeing</maintainer>
+  <author>Boeing</author>
+  <license>Apache-2.0</license>
 
-    <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-    <depend>boost</depend>
-    <depend>gazebo</depend>
-    <depend>gazebo_ros</depend>
-    <depend>rclcpp</depend>
-    <depend>geometry_msgs</depend>
-    <depend>sensor_msgs</depend>
-    <depend>nav_msgs</depend>
-    <depend>tf2_ros</depend>
-    <depend>tf2_geometry_msgs</depend>
+  <depend>boost</depend>
+  <depend>gazebo</depend>
+  <depend>gazebo_ros</depend>
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
 
-    <test_depend>launch_testing_ament_cmake</test_depend>
-    <test_depend>ros2launch</test_depend>
-    <test_depend>robot_state_publisher</test_depend>
+  <test_depend>launch_testing_ament_cmake</test_depend>
+  <test_depend>ros2launch</test_depend>
+  <test_depend>robot_state_publisher</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
