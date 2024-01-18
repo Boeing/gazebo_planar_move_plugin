@@ -1,11 +1,7 @@
+# Gazebo Planar Movement Plugin
 | Distro | CI Status                                                                                                                                                                                       |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Humble | [![CI](https://github.com/Boeing/gazebo_planar_move_plugin/actions/workflows/main.yml/badge.svg?branch=humble)](https://github.com/Boeing/gazebo_planar_move_plugin/actions/workflows/main.yml) |
-
-# Gazebo Planar Movement Plugin
-
-[![pipeline status](https://git.web.boeing.com/robotics/ros/gazebo_planar_move_plugin/badges/master/pipeline.svg)](https://git.web.boeing.com/robotics/ros/gazebo_planar_move_plugin/commits/master)
-[![coverage](https://git.web.boeing.com/robotics/ros/gazebo_planar_move_plugin/badges/master/coverage.svg)](https://git.web.boeing.com/robotics/ros/gazebo_planar_move_plugin/commits/master)
 
 ## Motivation
 
