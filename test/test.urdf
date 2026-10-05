@@ -2,7 +2,7 @@
 <robot name="test_robot">
 
     <gazebo>
-        <plugin name="planar_move_plugin" filename="libgazebo_planar_move_plugin.so">
+        <plugin name="gz::sim::v8::systems::PlanarMove" filename="libgazebo_planar_move_plugin.so">
             <robot_namespace>/</robot_namespace>
             <robot_frame>base_link</robot_frame>
             <odometry_frame>odom</odometry_frame>
